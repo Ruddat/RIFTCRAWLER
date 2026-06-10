@@ -1,0 +1,62 @@
+/* ============================================================
+   RIFT CRAWLER – Game Stylesheet
+   ============================================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0a0a14;
+  font-family: monospace;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+#gameCanvas {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  object-fit: contain;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* Center canvas if aspect ratio doesn't match */
+@supports (object-fit: contain) {
+  #gameCanvas {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+}
+
+/* Mobile adjustments */
+@media (hover: none) and (pointer: coarse) {
+  #gameCanvas {
+    width: 100vw;
+    height: 100vh;
+  }
+}
+
+/* Scanline overlay (optional – add via JS if desired) */
+.scanlines::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.03) 0px,
+    rgba(0, 0, 0, 0.03) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  pointer-events: none;
+}

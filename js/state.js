@@ -1,0 +1,166 @@
+// ============================================================
+// RIFT CRAWLER – Global Mutable Game State
+// ============================================================
+
+import { PLAYER_SPEED, PLAYER_MAX_HP, CANVAS_WIDTH, CANVAS_HEIGHT, ROOM_WIDTH, ROOM_HEIGHT, ROOM_OFFSET_X, ROOM_OFFSET_Y, DUNGEON_GRID, FLOORS_PER_RUN } from './config.js';
+
+export const state = {
+  // --- Game flow ---
+  screen: 'title',       // 'title' | 'playing' | 'gameover' | 'victory'
+  running: false,
+  paused: false,
+  dt: 0,
+  time: 0,
+
+  // --- Dungeon ---
+  dungeon: null,         // 2D array [gridY][gridX] → room object or null
+  currentRoom: { x: 3, y: 3 },
+  floor: 1,
+  roomsCleared: 0,
+
+  // --- Player ---
+  player: {
+    x: ROOM_WIDTH / 2,
+    y: ROOM_HEIGHT / 2,
+    vx: 0,
+    vy: 0,
+    speed: PLAYER_SPEED,
+    hp: PLAYER_MAX_HP,
+    maxHp: PLAYER_MAX_HP,
+    facing: 0,               // radians, 0 = right
+    attacking: false,
+    attackTimer: 0,
+    attackCooldown: 0,
+    shootCooldown: 0,
+    invincible: false,
+    invincibleTimer: 0,
+    dashing: false,
+    dashTimer: 0,
+    dashCooldown: 0,
+    dashDirX: 0,
+    dashDirY: 0,
+    weapon: 'sword',         // 'sword' | 'bow'
+    bombs: 3,
+    keys: 0,
+    gold: 0,
+    trail: [],
+    damageFlash: 0,
+  },
+
+  // --- Entities (current room only) ---
+  enemies: [],
+  bullets: [],              // player projectiles
+  enemyBullets: [],         // enemy projectiles
+  particles: [],
+  powerups: [],
+  damageNumbers: [],
+
+  // --- Room state ---
+  roomCleared: false,
+  doorsOpen: true,
+  transitioning: false,
+  transitionDir: null,       // 'up' | 'down' | 'left' | 'right'
+  transitionTimer: 0,
+  transitionOffset: { x: 0, y: 0 },
+
+  // --- Camera ---
+  camera: {
+    x: 0,
+    y: 0,
+    shake: 0,
+    shakeX: 0,
+    shakeY: 0,
+  },
+
+  // --- Score & combo ---
+  score: 0,
+  combo: 0,
+  comboTimer: 0,
+  maxCombo: 0,
+  kills: 0,
+
+  // --- Visual effects ---
+  screenFlash: 0,
+  flashColor: '#fff',
+  slowMotion: 1.0,
+
+  // --- Visited rooms for minimap ---
+  visitedRooms: new Set(),
+
+  // --- Floor transition ---
+  floorTransition: false,
+  floorTransitionTimer: 0,
+
+  // --- Input ---
+  lastInputMode: 'keyboard',  // 'keyboard' | 'mouse' | 'touch'
+};
+
+/** Reset the entire game state for a new run. */
+export function resetState() {
+  state.screen = 'playing';
+  state.running = true;
+  state.paused = false;
+  state.dt = 0;
+  state.time = 0;
+  state.floor = 1;
+  state.roomsCleared = 0;
+  state.score = 0;
+  state.combo = 0;
+  state.comboTimer = 0;
+  state.maxCombo = 0;
+  state.kills = 0;
+  state.screenFlash = 0;
+  state.slowMotion = 1.0;
+  state.visitedRooms = new Set();
+  state.floorTransition = false;
+  state.floorTransitionTimer = 0;
+
+  // Reset player
+  const p = state.player;
+  p.x = ROOM_WIDTH / 2;
+  p.y = ROOM_HEIGHT / 2;
+  p.vx = 0;
+  p.vy = 0;
+  p.speed = PLAYER_SPEED;
+  p.hp = PLAYER_MAX_HP;
+  p.maxHp = PLAYER_MAX_HP;
+  p.facing = 0;
+  p.attacking = false;
+  p.attackTimer = 0;
+  p.attackCooldown = 0;
+  p.shootCooldown = 0;
+  p.invincible = false;
+  p.invincibleTimer = 0;
+  p.dashing = false;
+  p.dashTimer = 0;
+  p.dashCooldown = 0;
+  p.weapon = 'sword';
+  p.bombs = 3;
+  p.keys = 0;
+  p.gold = 0;
+  p.trail = [];
+  p.damageFlash = 0;
+
+  // Clear entities
+  state.enemies = [];
+  state.bullets = [];
+  state.enemyBullets = [];
+  state.particles = [];
+  state.powerups = [];
+  state.damageNumbers = [];
+
+  // Room
+  state.roomCleared = false;
+  state.doorsOpen = true;
+  state.transitioning = false;
+  state.transitionDir = null;
+  state.transitionTimer = 0;
+  state.transitionOffset = { x: 0, y: 0 };
+
+  // Camera
+  state.camera.x = 0;
+  state.camera.y = 0;
+  state.camera.shake = 0;
+  state.camera.shakeX = 0;
+  state.camera.shakeY = 0;
+}
