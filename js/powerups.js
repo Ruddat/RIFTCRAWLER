@@ -15,20 +15,26 @@ import { weightedPick, randRange } from './utils.js';
 
 const POWERUP_TYPES = [
   // --- Common ---
-  { item: 'health',      weight: 25, color: NEON_RED,    label: '+HP',   desc: 'Heilt 2 HP' },
-  { item: 'gold',        weight: 20, color: NEON_YELLOW, label: 'GOLD',  desc: '+10-25 Gold' },
+  { item: 'health',      weight: 22, color: NEON_RED,    label: '+HP',   desc: 'Heilt 2 HP' },
+  { item: 'gold',        weight: 18, color: NEON_YELLOW, label: 'GOLD',  desc: '+10-25 Gold' },
 
   // --- Uncommon ---
-  { item: 'shield',      weight: 12, color: NEON_BLUE,   label: 'SHLD',  desc: 'Schild fuer 8 Sek' },
-  { item: 'speedBoost',  weight: 12, color: NEON_YELLOW, label: 'SPD',   desc: 'Schneller fuer 10s' },
-  { item: 'bomb',        weight: 15, color: NEON_ORANGE, label: 'BMB',   desc: '+1 Bombe' },
-  { item: 'extraLife',   weight: 5,  color: '#ff66aa',   label: '1UP',   desc: 'Extra Leben!' },
+  { item: 'shield',      weight: 10, color: NEON_BLUE,   label: 'SHLD',  desc: 'Schild fuer 8 Sek' },
+  { item: 'speedBoost',  weight: 10, color: NEON_YELLOW, label: 'SPD',   desc: 'Schneller fuer 10s' },
+  { item: 'bomb',        weight: 14, color: NEON_ORANGE, label: 'BMB',   desc: '+1 Bombe' },
+  { item: 'orbital',     weight: 10, color: '#00ccff',   label: 'ORB',   desc: 'Orbitalkugel!' },
+  { item: 'berserk',     weight: 7,  color: '#ff4444',   label: 'BSRK',  desc: 'Berserker-Modus!' },
 
   // --- Rare ---
-  { item: 'weaponUp',    weight: 8,  color: NEON_PURPLE, label: 'WPN+',  desc: 'Waffen-Upgrade' },
-  { item: 'maxHealth',   weight: 6,  color: '#ff4488',   label: '+MAX',  desc: '+1 Max HP' },
-  { item: 'nuke',        weight: 4,  color: '#ffffff',   label: 'NUKE',  desc: 'Alles explodiert!' },
-  { item: 'magnet',      weight: 8,  color: '#88ffcc',   label: 'MAG',   desc: 'Magnet fuer 15s' },
+  { item: 'extraLife',   weight: 4,  color: '#ff66aa',   label: '1UP',   desc: 'Extra Leben!' },
+  { item: 'weaponUp',    weight: 7,  color: NEON_PURPLE, label: 'WPN+',  desc: 'Waffen-Upgrade' },
+  { item: 'maxHealth',   weight: 5,  color: '#ff4488',   label: '+MAX',  desc: '+1 Max HP' },
+  { item: 'timeSlow',    weight: 5,  color: '#aaaaff',   label: 'SLOW',  desc: 'Zeitlupe 8s' },
+  { item: 'chainLightning', weight: 4, color: '#44ffff', label: 'CHN',   desc: 'Kettenblitz!' },
+  { item: 'magnet',      weight: 7,  color: '#88ffcc',   label: 'MAG',   desc: 'Magnet fuer 15s' },
+
+  // --- Legendary ---
+  { item: 'nuke',        weight: 2,  color: '#ffffff',   label: 'NUKE',  desc: 'Alles explodiert!' },
 ];
 
 /**
@@ -50,7 +56,7 @@ export function spawnPowerup(type, x, y) {
 }
 
 function createPowerup(def, x, y) {
-  const isRare = ['nuke', 'extraLife', 'weaponUp'].includes(def.item);
+  const isRare = ['nuke', 'extraLife', 'weaponUp', 'chainLightning', 'timeSlow'].includes(def.item);
   return {
     x, y,
     effect: def.item,
@@ -167,6 +173,42 @@ export function applyPowerupEffect(pw) {
       p.magnetRange = 200;
       // Auto-deactivate after 15s (handled in player update)
       window.__effects.spawnDamageNumber(p.x, p.y - 20, 'MAGNET!', '#88ffcc');
+      break;
+
+    case 'orbital':
+      p.orbitals = Math.min(p.orbitals + 1, 5);  // max 5 orbitals
+      p.orbitalAngle = 0;
+      window.__effects.spawnDamageNumber(p.x, p.y - 20, 'ORBITAL!', '#00ccff');
+      p.powerupGlow = 1.0;
+      break;
+
+    case 'timeSlow':
+      p.timeSlow = true;
+      p.timeSlowTimer = p.timeSlowMaxTime;
+      state.slowMotion = 0.4;  // slow enemies to 40% speed
+      window.__effects.spawnDamageNumber(p.x, p.y - 20, 'ZEITLUPEN!', '#aaaaff');
+      p.powerupGlow = 1.0;
+      window.__camera.shakeCamera(5);
+      break;
+
+    case 'berserk':
+      p.berserk = true;
+      p.berserkTimer = p.berserkMaxTime;
+      p.meleeDamage *= 2;
+      p.bulletDamage *= 2;
+      window.__effects.spawnDamageNumber(p.x, p.y - 20, 'BERSERKER!', '#ff4444');
+      p.powerupGlow = 1.5;
+      window.__camera.shakeCamera(8);
+      state.screenFlash = 0.3;
+      state.flashColor = '#ff4444';
+      break;
+
+    case 'chainLightning':
+      p.chainLightning = true;
+      p.chainLightningTimer = p.chainLightningMaxTime;
+      window.__effects.spawnDamageNumber(p.x, p.y - 20, 'KETTENBLITZ!', '#44ffff');
+      p.powerupGlow = 1.0;
+      window.__camera.shakeCamera(5);
       break;
 
     case 'nuke':

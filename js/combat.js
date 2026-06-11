@@ -46,6 +46,11 @@ export function updateCombat() {
         spawnParticles(e.x, e.y, NEON_PURPLE, 8, 80, 0.4);
         shakeCamera(5);
       }
+
+      // Chain Lightning - hits jump to nearby enemies
+      if (p.chainLightning) {
+        chainLightningHit(e, dmg, p.chainRange, p.chainDamage);
+      }
     }
   } else {
     for (const e of state.enemies) e._meleeHit = false;
@@ -120,4 +125,42 @@ function applyKnockback(e, angle, force) {
   e.knockbackX = Math.cos(angle) * force;
   e.knockbackY = Math.sin(angle) * force;
   e.knockbackTimer = KNOCKBACK_DURATION;
+}
+
+/** Chain Lightning - damage jumps from hit enemy to nearby enemies */
+function chainLightningHit(sourceEnemy, baseDmg, range, dmgFraction) {
+  const hit = new Set();
+  hit.add(sourceEnemy);
+  let current = sourceEnemy;
+  let chainDmg = Math.max(1, Math.floor(baseDmg * dmgFraction));
+
+  for (let chain = 0; chain < 4; chain++) {
+    let nearest = null;
+    let nearDist = range;
+    for (const e of state.enemies) {
+      if (hit.has(e) || e.hp <= 0) continue;
+      const d = dist(current.x, current.y, e.x, e.y);
+      if (d < nearDist) {
+        nearDist = d;
+        nearest = e;
+      }
+    }
+    if (!nearest) break;
+
+    hit.add(nearest);
+    nearest.hp -= chainDmg;
+    nearest.hitFlash = 1;
+    spawnParticles(nearest.x, nearest.y, '#44ffff', 6, 50, 0.3);
+    spawnDamageNumber(nearest.x, nearest.y - 10, chainDmg, '#44ffff');
+
+    // Visual lightning line between current and nearest
+    window.__effects.spawnParticles(
+      (current.x + nearest.x) / 2,
+      (current.y + nearest.y) / 2,
+      '#44ffff', 3, 30, 0.2
+    );
+
+    chainDmg = Math.max(1, Math.floor(chainDmg * 0.7));
+    current = nearest;
+  }
 }

@@ -65,6 +65,29 @@ export const state = {
     speedBoostTimer: 0,
     magnetRange: 0,         // 0 = off, >0 = active range
 
+    // --- Orbital ---
+    orbitals: 0,            // number of orbiting orbs
+    orbitalAngle: 0,        // current rotation angle
+    orbitalDamage: 2,       // damage per hit
+    orbitalRadius: 50,      // orbit radius
+
+    // --- Time Slow ---
+    timeSlow: false,
+    timeSlowTimer: 0,
+    timeSlowMaxTime: 8,     // seconds
+
+    // --- Berserk ---
+    berserk: false,
+    berserkTimer: 0,
+    berserkMaxTime: 10,     // seconds
+
+    // --- Chain Lightning ---
+    chainLightning: false,
+    chainLightningTimer: 0,
+    chainLightningMaxTime: 15,  // seconds
+    chainRange: 100,            // chain range in pixels
+    chainDamage: 0.5,           // fraction of original damage
+
     // --- Visual ---
     powerupGlow: 0,         // timer for glow effect on pickup
     levelUpFlash: 0,        // timer for weapon level-up flash
@@ -181,6 +204,24 @@ export function resetState() {
   p.speedBoost = false;
   p.speedBoostTimer = 0;
   p.magnetRange = 0;
+
+  // Orbital
+  p.orbitals = 0;
+  p.orbitalAngle = 0;
+  p.orbitalDamage = 2;
+  p.orbitalRadius = 50;
+
+  // Time Slow
+  p.timeSlow = false;
+  p.timeSlowTimer = 0;
+
+  // Berserk
+  p.berserk = false;
+  p.berserkTimer = 0;
+
+  // Chain Lightning
+  p.chainLightning = false;
+  p.chainLightningTimer = 0;
 
   // Visual
   p.powerupGlow = 0;

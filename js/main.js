@@ -327,29 +327,6 @@ function renderGame() {
 
   // HUD (screen-space)
   drawHud(ctx);
-
-  // Dash cooldown indicator
-  drawDashIndicator(ctx);
-}
-
-function drawDashIndicator(ctx) {
-  const p = state.player;
-  const x = 16;
-  const y = CANVAS_HEIGHT - 30;
-
-  ctx.fillStyle = 'rgba(0,0,0,0.4)';
-  ctx.fillRect(x, y, 60, 8);
-
-  const cd = p.dashCooldown;
-  const maxCd = 0.8; // DASH_COOLDOWN
-  const ready = cd <= 0;
-
-  ctx.fillStyle = ready ? NEON_BLUE : 'rgba(0, 212, 255, 0.3)';
-  ctx.fillRect(x, y, 60 * (ready ? 1 : 1 - cd / maxCd), 8);
-
-  ctx.fillStyle = '#fff';
-  ctx.font = '8px monospace';
-  ctx.fillText('DASH', x + 2, y + 7);
 }
 
 // ============================================================

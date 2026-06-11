@@ -109,11 +109,14 @@ export function drawHud(ctx) {
   // --- Bombs ---
   ctx.fillStyle = NEON_ORANGE;
   ctx.font = '11px monospace';
-  ctx.fillText('B:' + p.bombs, CANVAS_WIDTH - 40, 18);
+  ctx.fillText('B:' + p.bombs, CANVAS_WIDTH - 100, 48);
 
   // --- Gold ---
   ctx.fillStyle = NEON_YELLOW;
-  ctx.fillText('G:' + p.gold, CANVAS_WIDTH - 40, 36);
+  ctx.fillText('G:' + p.gold, CANVAS_WIDTH - 40, 18);
+
+  // --- Active Buff Icons (bottom left) ---
+  drawActiveBuffs(ctx, p);
 
   // --- Combo ---
   if (state.combo > 1) {
@@ -268,4 +271,63 @@ function drawHeart(ctx, x, y, size, color) {
   ctx.bezierCurveTo(x + size, y - size * 0.3, x, y - size * 0.3, x, y + size * 0.3);
   ctx.fill();
   ctx.shadowBlur = 0;
+}
+
+// ============================================================
+// Active Buff Display
+// ============================================================
+
+function drawActiveBuffs(ctx, p) {
+  const buffs = [];
+  const now = state.time;
+
+  if (p.shield)       buffs.push({ label: 'SHIELD', color: NEON_BLUE, timer: p.shieldTimer, max: p.shieldMaxTime });
+  if (p.speedBoost)   buffs.push({ label: 'SPEED', color: NEON_YELLOW, timer: p.speedBoostTimer, max: 10 });
+  if (p.berserk)      buffs.push({ label: 'BERSERK', color: '#ff4444', timer: p.berserkTimer, max: p.berserkMaxTime });
+  if (p.timeSlow)     buffs.push({ label: 'SLOW-MO', color: '#aaaaff', timer: p.timeSlowTimer, max: p.timeSlowMaxTime });
+  if (p.chainLightning) buffs.push({ label: 'CHAIN', color: '#44ffff', timer: p.chainLightningTimer, max: p.chainLightningMaxTime });
+  if (p.magnetRange > 0) buffs.push({ label: 'MAGNET', color: '#88ffcc', timer: 15, max: 15 });
+  if (p.orbitals > 0) buffs.push({ label: 'ORB x' + p.orbitals, color: '#00ccff', timer: -1, max: -1 });  // permanent
+  if (p.bulletPiercing) buffs.push({ label: 'PIERCE', color: NEON_PURPLE, timer: -1, max: -1 });  // permanent
+
+  const startX = 16;
+  const startY = CANVAS_HEIGHT - 60;
+  const bw = 65;
+  const bh = 16;
+
+  for (let i = 0; i < buffs.length; i++) {
+    const b = buffs[i];
+    const bx = startX + i * (bw + 4);
+    const by = startY;
+
+    // Background
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(bx, by, bw, bh);
+
+    // Timer bar
+    if (b.timer > 0 && b.max > 0) {
+      const frac = b.timer / b.max;
+      ctx.fillStyle = b.color;
+      ctx.globalAlpha = 0.3;
+      ctx.fillRect(bx, by, bw * frac, bh);
+      ctx.globalAlpha = 1;
+    }
+
+    // Label
+    ctx.fillStyle = b.color;
+    ctx.shadowColor = b.color;
+    ctx.shadowBlur = 4;
+    ctx.font = 'bold 9px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(b.label, bx + 3, by + 12);
+    ctx.shadowBlur = 0;
+
+    // Permanent indicator (pulsing)
+    if (b.timer < 0) {
+      ctx.globalAlpha = 0.5 + Math.sin(now * 4) * 0.3;
+      ctx.fillStyle = b.color;
+      ctx.fillRect(bx + bw - 6, by + 2, 4, bh - 4);
+      ctx.globalAlpha = 1;
+    }
+  }
 }

@@ -11,7 +11,7 @@ import {
 import { state } from './state.js';
 import { getMovement, consumeAttack, consumeDash, consumeShoot, consumeBomb, getMousePos } from './input.js';
 import { isWallAt, resolveWallCollision, checkDoorTransition, getDoorEntryPoint, oppositeDir, getCurrentRoom } from './room.js';
-import { clamp, angleBetween, dist } from './utils.js';
+import { clamp, angleBetween, dist, randRange } from './utils.js';
 import { spawnParticles, spawnDamageNumber } from './effects.js';
 import { shakeCamera } from './camera.js';
 
@@ -55,6 +55,76 @@ export function updatePlayer(dt) {
       p.speedBoost = false;
       p.speedBoostTimer = 0;
       p.speed = PLAYER_SPEED;
+    }
+  }
+
+  // --- Orbital rotation ---
+  if (p.orbitals > 0) {
+    p.orbitalAngle += dt * 4;  // rotation speed
+    // Check orbital collision with enemies
+    for (let oi = 0; oi < p.orbitals; oi++) {
+      const oAngle = p.orbitalAngle + (Math.PI * 2 / p.orbitals) * oi;
+      const ox = p.x + Math.cos(oAngle) * p.orbitalRadius;
+      const oy = p.y + Math.sin(oAngle) * p.orbitalRadius;
+      for (const e of state.enemies) {
+        if (dist(ox, oy, e.x, e.y) < 12 + e.size) {
+          if (!e._orbitalHit) {
+            e._orbitalHit = true;
+            e.hp -= p.orbitalDamage;
+            e.hitFlash = 1;
+            const pushAngle = angleBetween(p.x, p.y, e.x, e.y);
+            e.knockbackX = Math.cos(pushAngle) * KNOCKBACK_FORCE * 0.5;
+            e.knockbackY = Math.sin(pushAngle) * KNOCKBACK_FORCE * 0.5;
+            e.knockbackTimer = KNOCKBACK_DURATION;
+            spawnParticles(ox, oy, '#00ccff', 4, 40, 0.3);
+            spawnDamageNumber(e.x, e.y - 10, p.orbitalDamage, '#00ccff');
+          }
+        }
+      }
+    }
+    // Reset orbital hit flags
+    for (const e of state.enemies) e._orbitalHit = false;
+  }
+
+  // --- Time Slow timer ---
+  if (p.timeSlow) {
+    p.timeSlowTimer -= dt;
+    if (p.timeSlowTimer <= 0) {
+      p.timeSlow = false;
+      p.timeSlowTimer = 0;
+      state.slowMotion = 1.0;
+      spawnParticles(p.x, p.y, '#aaaaff', 8, 50, 0.4);
+    }
+  }
+
+  // --- Berserk timer ---
+  if (p.berserk) {
+    p.berserkTimer -= dt;
+    if (p.berserkTimer <= 0) {
+      p.berserk = false;
+      p.berserkTimer = 0;
+      // Restore base damage (reverse the 2x)
+      p.meleeDamage = Math.max(1, Math.floor(p.meleeDamage / 2));
+      p.bulletDamage = Math.max(1, Math.floor(p.bulletDamage / 2));
+      spawnParticles(p.x, p.y, '#ff4444', 8, 50, 0.4);
+    }
+  }
+
+  // --- Chain Lightning timer ---
+  if (p.chainLightning) {
+    p.chainLightningTimer -= dt;
+    if (p.chainLightningTimer <= 0) {
+      p.chainLightning = false;
+      p.chainLightningTimer = 0;
+      spawnParticles(p.x, p.y, '#44ffff', 8, 50, 0.4);
+    }
+  }
+
+  // --- Magnet timer (simple countdown) ---
+  if (p.magnetRange > 0) {
+    p.magnetRange -= dt * 13;  // 200 / 15s ≈ 13.3 per second
+    if (p.magnetRange <= 0) {
+      p.magnetRange = 0;
     }
   }
 
@@ -456,6 +526,109 @@ export function drawPlayer(ctx) {
   // --- Speed boost particles ---
   if (p.speedBoost && Math.random() < 0.3) {
     spawnParticles(p.x, p.y, NEON_YELLOW, 1, 20, 0.2);
+  }
+
+  // --- Berserk aura ---
+  if (p.berserk) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.globalAlpha = 0.15 + Math.sin(state.time * 8) * 0.1;
+    ctx.fillStyle = '#ff4444';
+    ctx.shadowColor = '#ff4444';
+    ctx.shadowBlur = 30;
+    ctx.beginPath();
+    ctx.arc(0, 0, PLAYER_SIZE + 22 + Math.sin(state.time * 6) * 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.restore();
+    ctx.globalAlpha = 1;
+
+    // Berserk particles
+    if (Math.random() < 0.4) {
+      spawnParticles(p.x + randRange(-15, 15), p.y + randRange(-15, 15), '#ff4444', 1, 30, 0.3);
+    }
+  }
+
+  // --- Orbitals ---
+  if (p.orbitals > 0) {
+    for (let oi = 0; oi < p.orbitals; oi++) {
+      const oAngle = p.orbitalAngle + (Math.PI * 2 / p.orbitals) * oi;
+      const ox = p.x + Math.cos(oAngle) * p.orbitalRadius;
+      const oy = p.y + Math.sin(oAngle) * p.orbitalRadius;
+
+      // Orbital trail
+      ctx.globalAlpha = 0.3;
+      ctx.strokeStyle = '#00ccff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.orbitalRadius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      // Orbital orb
+      ctx.save();
+      ctx.translate(ox, oy);
+      ctx.fillStyle = '#00ccff';
+      ctx.shadowColor = '#00ccff';
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.arc(0, 0, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Inner glow
+      ctx.fillStyle = '#fff';
+      ctx.globalAlpha = 0.6;
+      ctx.beginPath();
+      ctx.arc(0, 0, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      ctx.shadowBlur = 0;
+      ctx.restore();
+    }
+  }
+
+  // --- Time Slow visual effect ---
+  if (p.timeSlow) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.globalAlpha = 0.1 + Math.sin(state.time * 3) * 0.05;
+    ctx.strokeStyle = '#aaaaff';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = '#aaaaff';
+    ctx.shadowBlur = 15;
+    ctx.beginPath();
+    ctx.arc(0, 0, PLAYER_SIZE + 30 + Math.sin(state.time * 2) * 10, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  // --- Chain Lightning indicator ---
+  if (p.chainLightning) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.globalAlpha = 0.3 + Math.sin(state.time * 10) * 0.2;
+    ctx.strokeStyle = '#44ffff';
+    ctx.lineWidth = 1.5;
+    ctx.shadowColor = '#44ffff';
+    ctx.shadowBlur = 10;
+    // Small lightning bolts around player
+    for (let li = 0; li < 4; li++) {
+      const la = state.time * 3 + li * Math.PI / 2;
+      const lr = PLAYER_SIZE + 6;
+      const lx = Math.cos(la) * lr;
+      const ly = Math.sin(la) * lr;
+      ctx.beginPath();
+      ctx.moveTo(lx, ly);
+      ctx.lineTo(lx + randRange(-4, 4), ly + randRange(-4, 4));
+      ctx.lineTo(lx + randRange(-6, 6), ly + randRange(-6, 6));
+      ctx.stroke();
+    }
+    ctx.shadowBlur = 0;
+    ctx.restore();
+    ctx.globalAlpha = 1;
   }
 
   // --- Melee attack arc (scaled by weapon level) ---
