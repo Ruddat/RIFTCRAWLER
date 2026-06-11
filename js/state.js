@@ -13,7 +13,7 @@ export const state = {
   time: 0,
 
   // --- Dungeon ---
-  dungeon: null,         // 2D array [gridY][gridX] → room object or null
+  dungeon: null,
   currentRoom: { x: 3, y: 3 },
   floor: 1,
   roomsCleared: 0,
@@ -27,7 +27,8 @@ export const state = {
     speed: PLAYER_SPEED,
     hp: PLAYER_MAX_HP,
     maxHp: PLAYER_MAX_HP,
-    facing: 0,               // radians, 0 = right
+    lives: 2,                // Extra-Leben (2 = 3 Versuche total)
+    facing: 0,
     attacking: false,
     attackTimer: 0,
     attackCooldown: 0,
@@ -39,18 +40,40 @@ export const state = {
     dashCooldown: 0,
     dashDirX: 0,
     dashDirY: 0,
-    weapon: 'sword',         // 'sword' | 'bow'
     bombs: 3,
     keys: 0,
     gold: 0,
     trail: [],
     damageFlash: 0,
+
+    // --- Shield ---
+    shield: false,
+    shieldTimer: 0,
+    shieldMaxTime: 8,       // seconds
+    shieldHits: 0,          // absorbed hits
+
+    // --- Weapon upgrades ---
+    weaponLevel: 1,         // 1-5, affects damage, range, bullet count
+    bulletDamage: 1,
+    bulletCount: 1,         // projectiles per shot
+    bulletPiercing: false,
+    meleeDamage: 2,
+    meleeRange: 1.0,        // multiplier
+
+    // --- Active timed buffs ---
+    speedBoost: false,
+    speedBoostTimer: 0,
+    magnetRange: 0,         // 0 = off, >0 = active range
+
+    // --- Visual ---
+    powerupGlow: 0,         // timer for glow effect on pickup
+    levelUpFlash: 0,        // timer for weapon level-up flash
   },
 
   // --- Entities (current room only) ---
   enemies: [],
-  bullets: [],              // player projectiles
-  enemyBullets: [],         // enemy projectiles
+  bullets: [],
+  enemyBullets: [],
   particles: [],
   powerups: [],
   damageNumbers: [],
@@ -59,7 +82,7 @@ export const state = {
   roomCleared: false,
   doorsOpen: true,
   transitioning: false,
-  transitionDir: null,       // 'up' | 'down' | 'left' | 'right'
+  transitionDir: null,
   transitionTimer: 0,
   transitionOffset: { x: 0, y: 0 },
 
@@ -92,7 +115,7 @@ export const state = {
   floorTransitionTimer: 0,
 
   // --- Input ---
-  lastInputMode: 'keyboard',  // 'keyboard' | 'mouse' | 'touch'
+  lastInputMode: 'keyboard',
 };
 
 /** Reset the entire game state for a new run. */
@@ -124,6 +147,7 @@ export function resetState() {
   p.speed = PLAYER_SPEED;
   p.hp = PLAYER_MAX_HP;
   p.maxHp = PLAYER_MAX_HP;
+  p.lives = 2;
   p.facing = 0;
   p.attacking = false;
   p.attackTimer = 0;
@@ -134,12 +158,33 @@ export function resetState() {
   p.dashing = false;
   p.dashTimer = 0;
   p.dashCooldown = 0;
-  p.weapon = 'sword';
   p.bombs = 3;
   p.keys = 0;
   p.gold = 0;
   p.trail = [];
   p.damageFlash = 0;
+
+  // Shield
+  p.shield = false;
+  p.shieldTimer = 0;
+  p.shieldHits = 0;
+
+  // Weapon
+  p.weaponLevel = 1;
+  p.bulletDamage = 1;
+  p.bulletCount = 1;
+  p.bulletPiercing = false;
+  p.meleeDamage = 2;
+  p.meleeRange = 1.0;
+
+  // Buffs
+  p.speedBoost = false;
+  p.speedBoostTimer = 0;
+  p.magnetRange = 0;
+
+  // Visual
+  p.powerupGlow = 0;
+  p.levelUpFlash = 0;
 
   // Clear entities
   state.enemies = [];

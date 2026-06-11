@@ -34,6 +34,30 @@ export function updatePlayer(dt) {
   // --- Damage flash ---
   if (p.damageFlash > 0) p.damageFlash -= dt * 4;
 
+  // --- Powerup glow ---
+  if (p.powerupGlow > 0) p.powerupGlow -= dt * 2;
+  if (p.levelUpFlash > 0) p.levelUpFlash -= dt * 1.5;
+
+  // --- Shield timer ---
+  if (p.shield) {
+    p.shieldTimer -= dt;
+    if (p.shieldTimer <= 0) {
+      p.shield = false;
+      p.shieldTimer = 0;
+      spawnParticles(p.x, p.y, NEON_BLUE, 8, 50, 0.4);
+    }
+  }
+
+  // --- Speed boost timer ---
+  if (p.speedBoost) {
+    p.speedBoostTimer -= dt;
+    if (p.speedBoostTimer <= 0) {
+      p.speedBoost = false;
+      p.speedBoostTimer = 0;
+      p.speed = PLAYER_SPEED;
+    }
+  }
+
   // --- Dash ---
   if (p.dashing) {
     p.dashTimer -= dt;
@@ -120,20 +144,27 @@ export function updatePlayer(dt) {
 
   if (p.attackCooldown > 0) p.attackCooldown -= dt;
 
-  // --- Ranged attack ---
+  // --- Ranged attack (multi-shot based on weapon level) ---
   if (consumeShoot() && p.shootCooldown <= 0) {
     const aimAngle = p.facing;
-    state.bullets.push({
-      x: p.x + Math.cos(aimAngle) * 16,
-      y: p.y + Math.sin(aimAngle) * 16,
-      vx: Math.cos(aimAngle) * BULLET_SPEED,
-      vy: Math.sin(aimAngle) * BULLET_SPEED,
-      size: BULLET_SIZE,
-      damage: 1,
-      life: 2.0,
-      piercing: false,
-      color: NEON_BLUE,
-    });
+    const count = p.bulletCount || 1;
+    const spread = 0.15;  // radians between bullets
+    const startAngle = aimAngle - spread * (count - 1) / 2;
+
+    for (let i = 0; i < count; i++) {
+      const a = startAngle + spread * i;
+      state.bullets.push({
+        x: p.x + Math.cos(a) * 16,
+        y: p.y + Math.sin(a) * 16,
+        vx: Math.cos(a) * BULLET_SPEED,
+        vy: Math.sin(a) * BULLET_SPEED,
+        size: BULLET_SIZE + (p.weaponLevel > 3 ? 1 : 0),
+        damage: p.bulletDamage || 1,
+        life: 2.0,
+        piercing: p.bulletPiercing || false,
+        color: p.weaponLevel >= 4 ? NEON_PURPLE : NEON_BLUE,
+      });
+    }
     p.shootCooldown = SHOOT_COOLDOWN;
     spawnParticles(
       p.x + Math.cos(aimAngle) * 20,
@@ -317,10 +348,13 @@ export function drawPlayer(ctx) {
   ctx.translate(p.x, p.y);
   ctx.rotate(p.facing);
 
-  ctx.shadowColor = NEON_BLUE;
-  ctx.shadowBlur = 15;
+  // Weapon level affects player color
+  const playerColor = p.weaponLevel >= 5 ? NEON_PURPLE :
+                      p.weaponLevel >= 3 ? NEON_GREEN : NEON_BLUE;
+  ctx.shadowColor = playerColor;
+  ctx.shadowBlur = 15 + p.weaponLevel * 3;
 
-  ctx.fillStyle = p.damageFlash > 0 ? NEON_RED : NEON_BLUE;
+  ctx.fillStyle = p.damageFlash > 0 ? NEON_RED : playerColor;
   ctx.beginPath();
   ctx.moveTo(16, 0);
   ctx.lineTo(-10, -10);
@@ -333,31 +367,120 @@ export function drawPlayer(ctx) {
   ctx.lineWidth = 1.5;
   ctx.stroke();
 
+  // Weapon level indicator (small dots)
+  if (p.weaponLevel > 1) {
+    ctx.fillStyle = NEON_YELLOW;
+    ctx.shadowBlur = 0;
+    for (let i = 0; i < p.weaponLevel - 1; i++) {
+      ctx.beginPath();
+      ctx.arc(-4 - i * 4, -14, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
   ctx.shadowBlur = 0;
   ctx.restore();
   ctx.globalAlpha = 1;
 
-  // --- Melee attack arc ---
+  // --- Shield orb ---
+  if (p.shield) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    const shieldPulse = 1 + Math.sin(state.time * 5) * 0.05;
+    ctx.scale(shieldPulse, shieldPulse);
+
+    const shieldAlpha = Math.min(p.shieldTimer / 2, 0.35);
+    ctx.globalAlpha = shieldAlpha;
+    ctx.fillStyle = NEON_BLUE;
+    ctx.shadowColor = NEON_BLUE;
+    ctx.shadowBlur = 20;
+    ctx.beginPath();
+    ctx.arc(0, 0, PLAYER_SIZE + 10, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.globalAlpha = shieldAlpha + 0.3;
+    ctx.strokeStyle = NEON_BLUE;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, PLAYER_SIZE + 10, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Shield timer ring
+    const shieldFrac = p.shieldTimer / p.shieldMaxTime;
+    ctx.globalAlpha = 0.8;
+    ctx.strokeStyle = NEON_BLUE;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(0, 0, PLAYER_SIZE + 14, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * shieldFrac);
+    ctx.stroke();
+
+    ctx.shadowBlur = 0;
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  // --- Powerup glow aura ---
+  if (p.powerupGlow > 0) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.globalAlpha = p.powerupGlow * 0.4;
+    ctx.fillStyle = NEON_YELLOW;
+    ctx.shadowColor = NEON_YELLOW;
+    ctx.shadowBlur = 25;
+    ctx.beginPath();
+    ctx.arc(0, 0, PLAYER_SIZE + 20, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  // --- Weapon level-up flash ---
+  if (p.levelUpFlash > 0) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.globalAlpha = p.levelUpFlash * 0.5;
+    ctx.strokeStyle = NEON_PURPLE;
+    ctx.lineWidth = 3;
+    ctx.shadowColor = NEON_PURPLE;
+    ctx.shadowBlur = 15;
+    const ring = PLAYER_SIZE + 25 + (1.5 - p.levelUpFlash) * 30;
+    ctx.beginPath();
+    ctx.arc(0, 0, ring, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  // --- Speed boost particles ---
+  if (p.speedBoost && Math.random() < 0.3) {
+    spawnParticles(p.x, p.y, NEON_YELLOW, 1, 20, 0.2);
+  }
+
+  // --- Melee attack arc (scaled by weapon level) ---
   if (p.attacking) {
     const progress = 1 - (p.attackTimer / ATTACK_DURATION);
     const swingAngle = p.facing - ATTACK_ARC / 2 + ATTACK_ARC * progress;
+    const meleeRange = ATTACK_RANGE * (p.meleeRange || 1.0);
 
     ctx.save();
     ctx.translate(p.x, p.y);
-    ctx.strokeStyle = NEON_YELLOW;
-    ctx.lineWidth = 3;
-    ctx.shadowColor = NEON_YELLOW;
-    ctx.shadowBlur = 10;
+    ctx.strokeStyle = p.weaponLevel >= 4 ? NEON_PURPLE : NEON_YELLOW;
+    ctx.lineWidth = 2 + p.weaponLevel;
+    ctx.shadowColor = ctx.strokeStyle;
+    ctx.shadowBlur = 10 + p.weaponLevel * 3;
 
     ctx.beginPath();
-    ctx.arc(0, 0, ATTACK_RANGE, p.facing - ATTACK_ARC / 2, swingAngle);
+    ctx.arc(0, 0, meleeRange, p.facing - ATTACK_ARC / 2, swingAngle);
     ctx.stroke();
 
-    const tipX = Math.cos(swingAngle) * ATTACK_RANGE;
-    const tipY = Math.sin(swingAngle) * ATTACK_RANGE;
+    // Sword tip
+    const tipX = Math.cos(swingAngle) * meleeRange;
+    const tipY = Math.sin(swingAngle) * meleeRange;
     ctx.fillStyle = '#fff';
     ctx.beginPath();
-    ctx.arc(tipX, tipY, 4, 0, Math.PI * 2);
+    ctx.arc(tipX, tipY, 3 + p.weaponLevel, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.shadowBlur = 0;
@@ -402,10 +525,26 @@ export function drawBullets(ctx) {
   ctx.shadowBlur = 0;
 }
 
-/** Deal damage to the player */
+/** Deal damage to the player – shield absorbs first */
 export function damagePlayer(amount) {
   const p = state.player;
   if (p.invincible || p.dashing) return;
+
+  // Shield absorbs damage
+  if (p.shield) {
+    p.shieldHits++;
+    p.shieldTimer -= 2;  // each hit shortens shield by 2s
+    spawnParticles(p.x, p.y, NEON_BLUE, 10, 60, 0.4);
+    window.__effects.spawnDamageNumber(p.x, p.y - 20, 'BLOCKED!', NEON_BLUE);
+    shakeCamera(3);
+    // If shield is still up, absorb the hit
+    if (p.shieldTimer > 0 && p.shieldHits < 3) return;
+    // Shield breaks
+    p.shield = false;
+    p.shieldTimer = 0;
+    spawnParticles(p.x, p.y, NEON_BLUE, 15, 80, 0.5);
+    window.__effects.spawnDamageNumber(p.x, p.y - 30, 'SHIELD BROKEN!', NEON_RED);
+  }
 
   p.hp -= amount;
   p.invincible = true;
@@ -418,10 +557,25 @@ export function damagePlayer(amount) {
   spawnParticles(p.x, p.y, NEON_RED, 12, 80, 0.5);
 
   if (p.hp <= 0) {
-    p.hp = 0;
-    state.screen = 'gameover';
-    state.running = false;
-    spawnParticles(p.x, p.y, NEON_RED, 40, 120, 1.0);
+    // Extra life?
+    if (p.lives > 0) {
+      p.lives--;
+      p.hp = p.maxHp;
+      p.invincible = true;
+      p.invincibleTimer = 2.0;
+      state.screenFlash = 0.5;
+      state.flashColor = '#ff66aa';
+      spawnParticles(p.x, p.y, '#ff66aa', 30, 120, 0.8);
+      window.__effects.spawnDamageNumber(p.x, p.y - 30, 'EXTRA LEBEN!', '#ff66aa');
+      shakeCamera(10);
+      // Clear enemy bullets on revive
+      state.enemyBullets = [];
+    } else {
+      p.hp = 0;
+      state.screen = 'gameover';
+      state.running = false;
+      spawnParticles(p.x, p.y, NEON_RED, 40, 120, 1.0);
+    }
   }
 }
 

@@ -1,5 +1,5 @@
 // ============================================================
-// RIFT CRAWLER – HUD Overlay (Health, Minimap, Score, etc.)
+// RIFT CRAWLER – HUD Overlay (Health, Shield, Lives, Weapon, Minimap)
 // ============================================================
 
 import {
@@ -18,41 +18,74 @@ export function drawHud(ctx) {
 
   // --- Top bar background ---
   ctx.fillStyle = 'rgba(10, 10, 20, 0.85)';
-  ctx.fillRect(0, 0, CANVAS_WIDTH, 48);
+  ctx.fillRect(0, 0, CANVAS_WIDTH, 50);
   ctx.strokeStyle = 'rgba(0, 212, 255, 0.3)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(0, 48);
-  ctx.lineTo(CANVAS_WIDTH, 48);
+  ctx.moveTo(0, 50);
+  ctx.lineTo(CANVAS_WIDTH, 50);
   ctx.stroke();
 
   // --- Health hearts ---
   const heartStartX = 16;
-  const heartY = 14;
+  const heartY = 16;
   for (let i = 0; i < p.maxHp; i++) {
-    const hx = heartStartX + i * 22;
+    const hx = heartStartX + i * 20;
     if (i < p.hp) {
-      drawHeart(ctx, hx, heartY, 8, NEON_RED);
+      drawHeart(ctx, hx, heartY, 7, NEON_RED);
     } else {
-      drawHeart(ctx, hx, heartY, 8, 'rgba(255,255,255,0.15)');
+      drawHeart(ctx, hx, heartY, 7, 'rgba(255,255,255,0.12)');
     }
+  }
+
+  // --- Extra lives ---
+  if (p.lives > 0) {
+    ctx.fillStyle = '#ff66aa';
+    ctx.shadowColor = '#ff66aa';
+    ctx.shadowBlur = 4;
+    ctx.font = 'bold 11px monospace';
+    ctx.textAlign = 'left';
+    const livesX = heartStartX + p.maxHp * 20 + 8;
+    ctx.fillText('x' + (p.lives + 1), livesX, heartY + 8);
+    ctx.shadowBlur = 0;
+  }
+
+  // --- Shield bar ---
+  if (p.shield) {
+    const shieldX = heartStartX;
+    const shieldY = 36;
+    const shieldW = 100;
+    const shieldH = 5;
+    const shieldFrac = p.shieldTimer / p.shieldMaxTime;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.fillRect(shieldX, shieldY, shieldW, shieldH);
+    ctx.fillStyle = NEON_BLUE;
+    ctx.shadowColor = NEON_BLUE;
+    ctx.shadowBlur = 6;
+    ctx.fillRect(shieldX, shieldY, shieldW * shieldFrac, shieldH);
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = 'rgba(0, 212, 255, 0.5)';
+    ctx.font = '8px monospace';
+    ctx.fillText('SHIELD', shieldX + shieldW + 6, shieldY + 5);
   }
 
   // --- Floor & Room info ---
   ctx.fillStyle = NEON_BLUE;
-  ctx.font = 'bold 14px monospace';
+  ctx.font = 'bold 13px monospace';
   ctx.textAlign = 'center';
   ctx.shadowColor = NEON_BLUE;
   ctx.shadowBlur = 6;
   const room = window.__room_getCurrentRoom ? window.__room_getCurrentRoom() : null;
-  const roomType = room ? room.type : '';
   const floorName = room ? room.theme.name : '';
-  ctx.fillText(`ETAGE ${state.floor} – ${floorName}`, CANVAS_WIDTH / 2, 20);
+  ctx.fillText('ETAGE ' + state.floor + ' - ' + floorName, CANVAS_WIDTH / 2, 18);
   ctx.shadowBlur = 0;
 
-  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
   ctx.font = '10px monospace';
-  ctx.fillText(roomType.toUpperCase(), CANVAS_WIDTH / 2, 36);
+  const roomType = room ? room.type.toUpperCase() : '';
+  ctx.fillText(roomType, CANVAS_WIDTH / 2, 34);
 
   // --- Score ---
   ctx.textAlign = 'right';
@@ -60,17 +93,27 @@ export function drawHud(ctx) {
   ctx.font = 'bold 14px monospace';
   ctx.shadowColor = NEON_YELLOW;
   ctx.shadowBlur = 4;
-  ctx.fillText(`${state.score}`, CANVAS_WIDTH - 120, 20);
+  ctx.fillText('' + state.score, CANVAS_WIDTH - 100, 18);
+  ctx.shadowBlur = 0;
+
+  // --- Weapon Level ---
+  const wpnColors = ['', NEON_BLUE, NEON_GREEN, NEON_YELLOW, NEON_ORANGE, NEON_PURPLE];
+  const wpnColor = wpnColors[p.weaponLevel] || NEON_BLUE;
+  ctx.fillStyle = wpnColor;
+  ctx.shadowColor = wpnColor;
+  ctx.shadowBlur = 4;
+  ctx.font = 'bold 11px monospace';
+  ctx.fillText('WPN Lv' + p.weaponLevel, CANVAS_WIDTH - 100, 36);
   ctx.shadowBlur = 0;
 
   // --- Bombs ---
   ctx.fillStyle = NEON_ORANGE;
-  ctx.font = '12px monospace';
-  ctx.fillText(`💣 ${p.bombs}`, CANVAS_WIDTH - 120, 38);
+  ctx.font = '11px monospace';
+  ctx.fillText('B:' + p.bombs, CANVAS_WIDTH - 40, 18);
 
   // --- Gold ---
   ctx.fillStyle = NEON_YELLOW;
-  ctx.fillText(`💰 ${p.gold}`, CANVAS_WIDTH - 60, 38);
+  ctx.fillText('G:' + p.gold, CANVAS_WIDTH - 40, 36);
 
   // --- Combo ---
   if (state.combo > 1) {
@@ -79,11 +122,12 @@ export function drawHud(ctx) {
     ctx.save();
     ctx.translate(CANVAS_WIDTH / 2, CANVAS_HEIGHT - 40);
     ctx.scale(comboScale, comboScale);
-    ctx.fillStyle = NEON_YELLOW;
-    ctx.shadowColor = NEON_YELLOW;
+    const comboColor = state.combo >= 10 ? NEON_PURPLE : state.combo >= 5 ? NEON_ORANGE : NEON_YELLOW;
+    ctx.fillStyle = comboColor;
+    ctx.shadowColor = comboColor;
     ctx.shadowBlur = 10;
     ctx.font = 'bold 24px monospace';
-    ctx.fillText(`x${state.combo} COMBO`, 0, 0);
+    ctx.fillText('x' + state.combo + ' COMBO', 0, 0);
     ctx.shadowBlur = 0;
     ctx.restore();
   }
@@ -105,7 +149,34 @@ export function drawHud(ctx) {
   // --- Minimap ---
   drawMinimap(ctx);
 
+  // --- Dash cooldown indicator ---
+  drawDashIndicator(ctx);
+
   ctx.textAlign = 'left';
+}
+
+// ============================================================
+// Dash Indicator
+// ============================================================
+
+function drawDashIndicator(ctx) {
+  const p = state.player;
+  const x = 16;
+  const y = CANVAS_HEIGHT - 28;
+
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.fillRect(x, y, 60, 8);
+
+  const cd = p.dashCooldown;
+  const maxCd = 0.8;
+  const ready = cd <= 0;
+
+  ctx.fillStyle = ready ? NEON_BLUE : 'rgba(0, 212, 255, 0.3)';
+  ctx.fillRect(x, y, 60 * (ready ? 1 : 1 - cd / maxCd), 8);
+
+  ctx.fillStyle = '#fff';
+  ctx.font = '7px monospace';
+  ctx.fillText('DASH', x + 2, y + 7);
 }
 
 // ============================================================
@@ -113,12 +184,11 @@ export function drawHud(ctx) {
 // ============================================================
 
 function drawMinimap(ctx) {
-  const mmSize = 5;          // pixel size per room
+  const mmSize = 5;
   const mmPad = 2;
   const mmOffX = CANVAS_WIDTH - 16 - DUNGEON_GRID * (mmSize + mmPad);
   const mmOffY = CANVAS_HEIGHT - 16 - DUNGEON_GRID * (mmSize + mmPad);
 
-  // Background
   ctx.fillStyle = 'rgba(10, 10, 20, 0.7)';
   ctx.fillRect(mmOffX - 4, mmOffY - 4,
     DUNGEON_GRID * (mmSize + mmPad) + 4,
@@ -131,7 +201,7 @@ function drawMinimap(ctx) {
       const room = state.dungeon.grid[gy][gx];
       if (!room) continue;
 
-      const key = `${gx},${gy}`;
+      const key = gx + ',' + gy;
       const visited = state.visitedRooms.has(key);
       const isCurrent = state.currentRoom.x === gx && state.currentRoom.y === gy;
 
@@ -139,13 +209,11 @@ function drawMinimap(ctx) {
       const ry = mmOffY + gy * (mmSize + mmPad);
 
       if (!visited && !isCurrent) {
-        // Undiscovered – dim
         ctx.fillStyle = 'rgba(255,255,255,0.05)';
         ctx.fillRect(rx, ry, mmSize, mmSize);
         continue;
       }
 
-      // Color by room type
       let color = '#333';
       switch (room.type) {
         case 'start':    color = NEON_BLUE; break;
@@ -159,14 +227,13 @@ function drawMinimap(ctx) {
       ctx.fillStyle = color;
       ctx.fillRect(rx, ry, mmSize, mmSize);
 
-      // Current room highlight
       if (isCurrent) {
         ctx.strokeStyle = '#fff';
         ctx.lineWidth = 1;
         ctx.strokeRect(rx - 1, ry - 1, mmSize + 2, mmSize + 2);
       }
 
-      // Draw connections (doors)
+      // Connections
       ctx.strokeStyle = 'rgba(255,255,255,0.2)';
       ctx.lineWidth = 1;
       if (room.doors.right && gx + 1 < DUNGEON_GRID) {

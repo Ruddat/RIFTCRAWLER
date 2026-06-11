@@ -16,7 +16,7 @@ import { updatePlayer, drawPlayer, drawBullets, damagePlayer, healPlayer } from 
 import { spawnEnemy, updateEnemies, drawEnemies } from './enemies.js';
 import { updateCombat } from './combat.js';
 import { updateEffects, drawEffects, spawnParticles, spawnDamageNumber, spawnRing } from './effects.js';
-import { spawnPowerup, updatePowerups, drawPowerups } from './powerups.js';
+import { spawnPowerup, updatePowerups, drawPowerups, applyPowerupEffect } from './powerups.js';
 import { drawHud } from './hud.js';
 import { initAudio, playSfx, startMusic, stopMusic } from './audio.js';
 import { clamp, randRange } from './utils.js';
@@ -24,12 +24,13 @@ import { clamp, randRange } from './utils.js';
 // --- Expose modules for circular-dependency workarounds ---
 window.__effects = { spawnParticles, spawnDamageNumber, spawnRing };
 window.__player = { damagePlayer, healPlayer };
-window.__powerups = { spawnPowerup };
+window.__powerups = { spawnPowerup, applyPowerupEffect };
 window.__camera = { shakeCamera };
 window.__state = state;
 window.__room_getCurrentRoom = getCurrentRoom;
 window.__enemies_spawnEnemy = spawnEnemy;
 window.__powerups_spawnPowerup = spawnPowerup;
+window.__powerups_applyEffect = applyPowerupEffect;
 
 // ============================================================
 // Canvas Setup

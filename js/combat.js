@@ -5,7 +5,7 @@
 import {
   PLAYER_SIZE, ATTACK_RANGE, ATTACK_ARC,
   KNOCKBACK_FORCE, KNOCKBACK_DURATION,
-  NEON_RED, NEON_YELLOW,
+  NEON_RED, NEON_YELLOW, NEON_PURPLE,
 } from './config.js';
 import { state } from './state.js';
 import { dist, pointInArc } from './utils.js';
@@ -14,56 +14,63 @@ import { shakeCamera } from './camera.js';
 import { damagePlayer } from './player.js';
 
 /**
- * Process all combat collisions each frame:
- *  - Player melee vs enemies
- *  - Player bullets vs enemies
- *  - Enemy bullets vs player
- *  - Enemy contact vs player
+ * Process all combat collisions each frame.
  */
 export function updateCombat() {
   const p = state.player;
+  const meleeRange = ATTACK_RANGE * (p.meleeRange || 1.0);
 
   // --- Player melee attack vs enemies ---
   if (p.attacking) {
     for (const e of state.enemies) {
       const d = dist(p.x, p.y, e.x, e.y);
-      if (d > ATTACK_RANGE + e.size) continue;
-      if (!pointInArc(e.x, e.y, p.x, p.y, ATTACK_RANGE + e.size, p.facing, ATTACK_ARC)) continue;
-      // Only hit once per swing – track via flag
+      if (d > meleeRange + e.size) continue;
+      if (!pointInArc(e.x, e.y, p.x, p.y, meleeRange + e.size, p.facing, ATTACK_ARC)) continue;
       if (e._meleeHit) continue;
       e._meleeHit = true;
 
-      const dmg = 2;
+      const dmg = p.meleeDamage || 2;
       e.hp -= dmg;
       e.hitFlash = 1;
       applyKnockback(e, p.facing, KNOCKBACK_FORCE);
-      spawnParticles(e.x, e.y, NEON_YELLOW, 6, 60, 0.3);
+      spawnParticles(e.x, e.y, NEON_YELLOW, 6 + p.weaponLevel, 60, 0.3);
       spawnDamageNumber(e.x, e.y - 10, dmg, NEON_YELLOW);
-      shakeCamera(3);
+      shakeCamera(2 + p.weaponLevel);
+
+      // Weapon level 3+ = cleave (hit multiple enemies)
+      // Weapon level 5 = chance to crit
+      if (p.weaponLevel >= 5 && Math.random() < 0.25) {
+        const critDmg = Math.floor(dmg * 1.5);
+        e.hp -= critDmg;
+        spawnDamageNumber(e.x + 15, e.y - 20, 'CRIT! ' + critDmg, NEON_PURPLE);
+        spawnParticles(e.x, e.y, NEON_PURPLE, 8, 80, 0.4);
+        shakeCamera(5);
+      }
     }
   } else {
-    // Reset melee hit flags
     for (const e of state.enemies) e._meleeHit = false;
   }
 
   // --- Player bullets vs enemies ---
   for (let bi = state.bullets.length - 1; bi >= 0; bi--) {
     const b = state.bullets[bi];
+    let hitSomething = false;
     for (const e of state.enemies) {
       if (dist(b.x, b.y, e.x, e.y) < b.size + e.size) {
         e.hp -= b.damage;
         e.hitFlash = 1;
         applyKnockback(e, Math.atan2(b.vy, b.vx), KNOCKBACK_FORCE * 0.6);
         spawnParticles(e.x, e.y, b.color, 4, 40, 0.25);
-        spawnDamageNumber(e.x, e.y - 10, b.damage, NEON_YELLOW);
+        spawnDamageNumber(e.x, e.y - 10, b.damage, b.color);
         shakeCamera(2);
 
         if (!b.piercing) {
-          state.bullets.splice(bi, 1);
+          hitSomething = true;
           break;
         }
       }
     }
+    if (hitSomething) state.bullets.splice(bi, 1);
   }
 
   // --- Enemy bullets vs player ---
@@ -80,7 +87,7 @@ export function updateCombat() {
   // --- Enemy contact damage ---
   if (!p.invincible && !p.dashing) {
     for (const e of state.enemies) {
-      if (e.knockbackTimer > 0) continue; // knocked-back enemies don't deal contact
+      if (e.knockbackTimer > 0) continue;
       if (dist(e.x, e.y, p.x, p.y) < e.size + PLAYER_SIZE + 2) {
         damagePlayer(e.damage);
         break;
@@ -89,10 +96,12 @@ export function updateCombat() {
   }
 
   // --- Player vs powerups ---
+  const pickupRange = PLAYER_SIZE + 20;  // larger pickup range
   for (let i = state.powerups.length - 1; i >= 0; i--) {
     const pw = state.powerups[i];
-    if (dist(p.x, p.y, pw.x, pw.y) < PLAYER_SIZE + pw.size + 4) {
-      applyPowerup(pw);
+    if (dist(p.x, p.y, pw.x, pw.y) < pickupRange + pw.size) {
+      // Use the new powerup system from powerups.js
+      window.__powerups_applyEffect(pw);
       state.powerups.splice(i, 1);
     }
   }
@@ -111,40 +120,4 @@ function applyKnockback(e, angle, force) {
   e.knockbackX = Math.cos(angle) * force;
   e.knockbackY = Math.sin(angle) * force;
   e.knockbackTimer = KNOCKBACK_DURATION;
-}
-
-/** Apply a powerup to the player */
-function applyPowerup(pw) {
-  const p = state.player;
-  spawnParticles(pw.x, pw.y, pw.color, 10, 50, 0.4);
-
-  switch (pw.effect) {
-    case 'health':
-      p.hp = Math.min(p.hp + 2, p.maxHp);
-      spawnDamageNumber(p.x, p.y - 20, '+2 HP', pw.color);
-      break;
-    case 'maxHealth':
-      p.maxHp += 1;
-      p.hp = Math.min(p.hp + 1, p.maxHp);
-      spawnDamageNumber(p.x, p.y - 20, '+MAX HP', pw.color);
-      break;
-    case 'speed':
-      p.speed += 20;
-      spawnDamageNumber(p.x, p.y - 20, '+SPEED', pw.color);
-      break;
-    case 'bomb':
-      p.bombs += 1;
-      spawnDamageNumber(p.x, p.y - 20, '+BOMB', pw.color);
-      break;
-    case 'damage':
-      // Boost bullet damage
-      spawnDamageNumber(p.x, p.y - 20, '+DMG', pw.color);
-      break;
-    case 'gold':
-      const amount = pw.value || 10;
-      p.gold += amount;
-      spawnDamageNumber(p.x, p.y - 20, `+${amount}G`, pw.color);
-      state.score += amount;
-      break;
-  }
 }
