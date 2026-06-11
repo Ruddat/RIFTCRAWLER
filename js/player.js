@@ -6,7 +6,7 @@ import {
   PLAYER_SIZE, PLAYER_SPEED, ATTACK_DURATION, ATTACK_COOLDOWN,
   ATTACK_RANGE, ATTACK_ARC, DASH_SPEED, DASH_DURATION, DASH_COOLDOWN,
   INVINCIBLE_TIME, SHOOT_COOLDOWN, BULLET_SPEED, BULLET_SIZE,
-  ROOM_WIDTH, ROOM_HEIGHT, NEON_BLUE, NEON_GREEN, NEON_RED, NEON_YELLOW,
+  ROOM_WIDTH, ROOM_HEIGHT, WALL_THICKNESS, NEON_BLUE, NEON_GREEN, NEON_RED, NEON_YELLOW,
 } from './config.js';
 import { state } from './state.js';
 import { getMovement, consumeAttack, consumeDash, consumeShoot, consumeBomb, getMousePos } from './input.js';
@@ -243,16 +243,20 @@ function enterRoom(dir) {
   }
 }
 
-/** Get a random spawn position within the room */
+/** Get a random spawn position within the room (not in walls, not near player) */
 function getSpawnPosition() {
-  const pad = 60;
+  const pad = 64;  // stay away from walls
+  const wallPad = WALL_THICKNESS * 32 + 20;  // TILE_SIZE=32, WALL_THICKNESS=1
   let x, y;
   let attempts = 0;
   do {
-    x = pad + Math.random() * (ROOM_WIDTH - pad * 2);
-    y = pad + Math.random() * (ROOM_HEIGHT - pad * 2);
+    x = wallPad + Math.random() * (ROOM_WIDTH - wallPad * 2);
+    y = wallPad + Math.random() * (ROOM_HEIGHT - wallPad * 2);
     attempts++;
-  } while (isWallAt(x, y, 16) && attempts < 20);
+    // Also check not too close to player
+    const distToPlayer = dist(x, y, state.player.x, state.player.y);
+    if (!isWallAt(x, y, 20) && distToPlayer > 80) break;
+  } while (attempts < 30);
   return { x, y };
 }
 
@@ -426,5 +430,5 @@ export function healPlayer(amount) {
   const p = state.player;
   p.hp = Math.min(p.hp + amount, p.maxHp);
   spawnParticles(p.x, p.y, NEON_GREEN, 10, 50, 0.5);
-  spawnDamageNumber(p.x, p.y - 20, `+${amount}`, NEON_GREEN);
+  spawnDamageNumber(p.x, p.y - 20, '+' + amount, NEON_GREEN);
 }

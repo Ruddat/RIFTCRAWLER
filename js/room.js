@@ -4,7 +4,7 @@
 
 import {
   TILE_SIZE, ROOM_TILES_X, ROOM_TILES_Y, ROOM_WIDTH, ROOM_HEIGHT,
-  ROOM_OFFSET_X, ROOM_OFFSET_Y, WALL_THICKNESS, DOOR_WIDTH,
+  WALL_THICKNESS, DOOR_WIDTH, PLAYER_SIZE,
   DARK_BG, DARK_WALL, DARK_FLOOR, NEON_BLUE, NEON_RED, NEON_GREEN, NEON_YELLOW, NEON_PURPLE,
 } from './config.js';
 import { state } from './state.js';
@@ -17,11 +17,11 @@ const DOOR_POSITIONS = {
   right: { x: ROOM_TILES_X - WALL_THICKNESS, y: Math.floor(ROOM_TILES_Y / 2) - 1, w: WALL_THICKNESS, h: DOOR_WIDTH },
 };
 
-/** Get pixel position of door entrance (where player appears when entering) */
+/** Get pixel position of door entrance (where player appears when entering from opposite side) */
 export function getDoorEntryPoint(dir) {
   const cx = ROOM_WIDTH / 2;
   const cy = ROOM_HEIGHT / 2;
-  const pad = 48;
+  const pad = 52;
   switch (dir) {
     case 'up':    return { x: cx, y: pad };
     case 'down':  return { x: cx, y: ROOM_HEIGHT - pad };
@@ -35,24 +35,42 @@ export function oppositeDir(dir) {
   return { up: 'down', down: 'up', left: 'right', right: 'left' }[dir];
 }
 
-/** Check if player is in the door zone to trigger a room transition */
+/**
+ * Check if player is in the door zone to trigger a room transition.
+ * Player coordinates are in ROOM-LOCAL space (0 to ROOM_WIDTH, 0 to ROOM_HEIGHT).
+ * Door positions are also calculated in room-local space (NO ROOM_OFFSET).
+ */
 export function checkDoorTransition(px, py) {
   const room = getCurrentRoom();
   if (!room || !state.doorsOpen) return null;
 
-  const pad = 8;
   for (const dir of ['up', 'down', 'left', 'right']) {
     if (!room.doors[dir]) continue;
+
     const door = DOOR_POSITIONS[dir];
-    const dx = ROOM_OFFSET_X + door.x * TILE_SIZE;
-    const dy = ROOM_OFFSET_Y + door.y * TILE_SIZE;
+    // Room-local pixel coordinates (no ROOM_OFFSET!)
+    const dx = door.x * TILE_SIZE;
+    const dy = door.y * TILE_SIZE;
     const dw = door.w * TILE_SIZE;
     const dh = door.h * TILE_SIZE;
 
-    // Expanded hitbox for easier entry
-    if (px + 10 > dx - pad && px - 10 < dx + dw + pad &&
-        py + 10 > dy - pad && py - 10 < dy + dh + pad) {
-      return dir;
+    // Expanded detection zone: pad outward from the door opening
+    const padInward = 12;  // how far into the room to detect
+    const padOutward = 8;  // how far into the wall to detect (player entering)
+
+    switch (dir) {
+      case 'up':
+        if (px > dx - 4 && px < dx + dw + 4 && py < dy + dh + padInward && py > dy - padOutward) return dir;
+        break;
+      case 'down':
+        if (px > dx - 4 && px < dx + dw + 4 && py > dy - padInward && py < dy + dh + padOutward) return dir;
+        break;
+      case 'left':
+        if (py > dy - 4 && py < dy + dh + 4 && px < dx + dw + padInward && px > dx - padOutward) return dir;
+        break;
+      case 'right':
+        if (py > dy - 4 && py < dy + dh + 4 && px > dx - padInward && px < dx + dw + padOutward) return dir;
+        break;
     }
   }
   return null;
@@ -69,10 +87,9 @@ export function isWallAt(px, py, radius = 0) {
   const tx = Math.floor(px / TILE_SIZE);
   const ty = Math.floor(py / TILE_SIZE);
 
-  // Out of room bounds = wall
+  // Out of room bounds = wall (but allow door edges for transitions)
   if (tx < 0 || tx >= ROOM_TILES_X || ty < 0 || ty >= ROOM_TILES_Y) return true;
 
-  // Check if this tile is a wall
   if (isWallTile(tx, ty)) return true;
 
   // Check surrounding tiles for radius collision
@@ -98,27 +115,30 @@ export function isWallAt(px, py, radius = 0) {
   return false;
 }
 
-/** Check if a tile position is a wall (border, but not an open door) */
+/**
+ * Check if a tile position is a wall.
+ * Border tiles are walls, EXCEPT where there's an open door.
+ */
 function isWallTile(tx, ty) {
   const room = getCurrentRoom();
   if (!room) return true;
 
-  // Top wall
+  // Top wall row
   if (ty < WALL_THICKNESS) {
     if (room.doors.up && isDoorTile(tx, DOOR_POSITIONS.up) && state.doorsOpen) return false;
     return true;
   }
-  // Bottom wall
+  // Bottom wall row
   if (ty >= ROOM_TILES_Y - WALL_THICKNESS) {
     if (room.doors.down && isDoorTile(tx, DOOR_POSITIONS.down) && state.doorsOpen) return false;
     return true;
   }
-  // Left wall
+  // Left wall column
   if (tx < WALL_THICKNESS) {
     if (room.doors.left && isDoorTile(ty, DOOR_POSITIONS.left, true) && state.doorsOpen) return false;
     return true;
   }
-  // Right wall
+  // Right wall column
   if (tx >= ROOM_TILES_X - WALL_THICKNESS) {
     if (room.doors.right && isDoorTile(ty, DOOR_POSITIONS.right, true) && state.doorsOpen) return false;
     return true;
@@ -135,7 +155,10 @@ function isDoorTile(idx, door, vertical = false) {
   return idx >= door.x && idx < door.x + door.w;
 }
 
-/** Get wall collision resolution – push entity out of walls */
+/**
+ * Get wall collision resolution – push entity out of walls.
+ * Also clamps to room bounds so entities can't leave the room.
+ */
 export function resolveWallCollision(px, py, radius) {
   let nx = px;
   let ny = py;
@@ -167,6 +190,10 @@ export function resolveWallCollision(px, py, radius) {
     }
   }
 
+  // Clamp to room bounds (with margin for player size)
+  nx = Math.max(radius, Math.min(nx, ROOM_WIDTH - radius));
+  ny = Math.max(radius, Math.min(ny, ROOM_HEIGHT - radius));
+
   return { x: nx, y: ny };
 }
 
@@ -181,10 +208,7 @@ export function drawRoom(ctx) {
 
   const theme = room.theme;
 
-  ctx.save();
-  ctx.translate(ROOM_OFFSET_X, ROOM_OFFSET_Y);
-
-  // --- Floor ---
+  // Floor (full canvas background for the room area)
   ctx.fillStyle = theme.floor;
   ctx.fillRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
 
@@ -233,8 +257,6 @@ export function drawRoom(ctx) {
 
   // --- Room type indicator ---
   drawRoomTypeIndicator(ctx, room, theme);
-
-  ctx.restore();
 }
 
 function drawWalls(ctx, room, theme) {
@@ -255,10 +277,8 @@ function drawWalls(ctx, room, theme) {
   ctx.shadowColor = theme.accent;
   ctx.shadowBlur = 8;
 
-  // Inner border
   const inset = WALL_THICKNESS * TILE_SIZE;
   ctx.strokeRect(inset, inset, ROOM_WIDTH - inset * 2, ROOM_HEIGHT - inset * 2);
-
   ctx.shadowBlur = 0;
 }
 
@@ -273,17 +293,31 @@ function drawDoors(ctx, room, theme) {
     const dh = door.h * TILE_SIZE;
 
     if (state.doorsOpen) {
-      // Open door – dark opening with glow
+      // Open door – dark opening with green glow
       ctx.fillStyle = '#050510';
       ctx.fillRect(dx, dy, dw, dh);
 
-      // Glow edge
       ctx.strokeStyle = NEON_GREEN;
       ctx.lineWidth = 2;
       ctx.shadowColor = NEON_GREEN;
       ctx.shadowBlur = 12;
       ctx.strokeRect(dx, dy, dw, dh);
       ctx.shadowBlur = 0;
+
+      // Direction arrow inside the door
+      ctx.fillStyle = NEON_GREEN;
+      ctx.globalAlpha = 0.4 + Math.sin(state.time * 3) * 0.2;
+      const cx = dx + dw / 2;
+      const cy = dy + dh / 2;
+      ctx.beginPath();
+      switch (dir) {
+        case 'up':    ctx.moveTo(cx, cy - 6); ctx.lineTo(cx - 5, cy + 4); ctx.lineTo(cx + 5, cy + 4); break;
+        case 'down':  ctx.moveTo(cx, cy + 6); ctx.lineTo(cx - 5, cy - 4); ctx.lineTo(cx + 5, cy - 4); break;
+        case 'left':  ctx.moveTo(cx - 6, cy); ctx.lineTo(cx + 4, cy - 5); ctx.lineTo(cx + 4, cy + 5); break;
+        case 'right': ctx.moveTo(cx + 6, cy); ctx.lineTo(cx - 4, cy - 5); ctx.lineTo(cx - 4, cy + 5); break;
+      }
+      ctx.fill();
+      ctx.globalAlpha = 1;
     } else {
       // Locked door – red glow
       ctx.fillStyle = theme.wall;
@@ -296,8 +330,6 @@ function drawDoors(ctx, room, theme) {
       ctx.strokeRect(dx, dy, dw, dh);
 
       // Lock icon (small X)
-      ctx.strokeStyle = NEON_RED;
-      ctx.lineWidth = 2;
       const cx = dx + dw / 2;
       const cy = dy + dh / 2;
       const s = 6;
@@ -312,7 +344,6 @@ function drawDoors(ctx, room, theme) {
 }
 
 function drawRoomTypeIndicator(ctx, room, theme) {
-  // Small icon in top-right corner showing room type
   const iconX = ROOM_WIDTH - 30;
   const iconY = 30;
   ctx.globalAlpha = 0.3;
@@ -321,21 +352,21 @@ function drawRoomTypeIndicator(ctx, room, theme) {
     case 'treasure':
       ctx.fillStyle = NEON_YELLOW;
       ctx.font = '16px monospace';
-      ctx.fillText('💎', iconX - 8, iconY + 5);
+      ctx.fillText('*', iconX - 4, iconY + 5);
       break;
     case 'shop':
       ctx.fillStyle = NEON_GREEN;
-      ctx.font = '16px monospace';
+      ctx.font = 'bold 16px monospace';
       ctx.fillText('$', iconX - 4, iconY + 5);
       break;
     case 'boss':
       ctx.fillStyle = NEON_RED;
-      ctx.font = '16px monospace';
-      ctx.fillText('☠', iconX - 8, iconY + 5);
+      ctx.font = 'bold 16px monospace';
+      ctx.fillText('X', iconX - 5, iconY + 5);
       break;
     case 'rest':
       ctx.fillStyle = NEON_PURPLE;
-      ctx.font = '16px monospace';
+      ctx.font = 'bold 16px monospace';
       ctx.fillText('+', iconX - 4, iconY + 5);
       break;
   }

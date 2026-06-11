@@ -11,7 +11,7 @@ import { state, resetState } from './state.js';
 import { initInput, getMovement, consumePause, consumeFullscreen, consumeStart, isKeyDown } from './input.js';
 import { generateDungeon, getRoomAt, advanceFloor } from './dungeon.js';
 import { drawRoom, getCurrentRoom, getDoorEntryPoint, oppositeDir } from './room.js';
-import { updateCamera, applyCamera, shakeCamera } from './camera.js';
+import { updateCamera, shakeCamera } from './camera.js';
 import { updatePlayer, drawPlayer, drawBullets, damagePlayer, healPlayer } from './player.js';
 import { spawnEnemy, updateEnemies, drawEnemies } from './enemies.js';
 import { updateCombat } from './combat.js';
@@ -300,13 +300,14 @@ function renderGame() {
     return;
   }
 
-  // Room (floor, walls, doors)
+  // Everything in room-local space, translated to screen position
+  ctx.save();
+  ctx.translate(ROOM_OFFSET_X + state.camera.shakeX, ROOM_OFFSET_Y + state.camera.shakeY);
+
+  // Room (floor, walls, doors) – drawn in room-local coords
   drawRoom(ctx);
 
-  // Game entities (within room coordinate space)
-  ctx.save();
-  applyCamera(ctx);
-
+  // Game entities – also in room-local coords
   drawPowerups(ctx);
   drawBullets(ctx);
   drawEnemies(ctx);
@@ -356,9 +357,9 @@ function drawDashIndicator(ctx) {
 
 function renderPauseScreen() {
   // Still render the game underneath
-  drawRoom(ctx);
   ctx.save();
-  applyCamera(ctx);
+  ctx.translate(ROOM_OFFSET_X + state.camera.shakeX, ROOM_OFFSET_Y + state.camera.shakeY);
+  drawRoom(ctx);
   drawPowerups(ctx);
   drawBullets(ctx);
   drawEnemies(ctx);
