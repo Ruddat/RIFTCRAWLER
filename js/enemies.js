@@ -187,8 +187,11 @@ export function updateEnemies(dt) {
     const room = getCurrentRoom();
     if (room) room.cleared = true;
     window.__effects.spawnParticles(ROOM_WIDTH / 2, ROOM_HEIGHT / 2, NEON_GREEN, 20, 100, 0.6);
-    if (Math.random() < 0.35) {
-      state.powerups.push(window.__powerups.spawnPowerup('random', ROOM_WIDTH / 2, ROOM_HEIGHT / 2));
+    // Always drop a random powerup on room clear
+    state.powerups.push(window.__powerups.spawnPowerup('random', ROOM_WIDTH / 2, ROOM_HEIGHT / 2));
+    // 30% chance for a bonus drop
+    if (Math.random() < 0.30) {
+      state.powerups.push(window.__powerups.spawnPowerup('random', ROOM_WIDTH / 2 - 30, ROOM_HEIGHT / 2 + 10));
     }
   }
 }
@@ -380,6 +383,60 @@ function onEnemyKilled(e) {
   window.__effects.spawnParticles(e.x, e.y, e.color, e.type === 'boss' ? 40 : 15, e.type === 'boss' ? 150 : 80, 0.6);
   window.__effects.spawnDamageNumber(e.x, e.y, state.combo > 1 ? `x${state.combo}` : '', NEON_YELLOW);
   window.__camera.shakeCamera(e.type === 'boss' ? 15 : 5);
+
+  // --- Enemy drop table ---
+  const dropRoll = Math.random();
+  if (e.type === 'boss') {
+    // Boss: always drop something good
+    const drops = ['weaponUp', 'extraLife', 'maxHealth', 'orbital'];
+    const dropType = drops[Math.floor(Math.random() * drops.length)];
+    state.powerups.push(window.__powerups.spawnPowerup(dropType, e.x, e.y));
+    // Plus guaranteed gold
+    state.powerups.push(window.__powerups.spawnPowerup('gold', e.x - 20, e.y + 10));
+    state.powerups.push(window.__powerups.spawnPowerup('gold', e.x + 20, e.y - 10));
+  } else if (e.type === 'knight') {
+    // Knight: 50% drop (good stuff)
+    if (dropRoll < 0.25) {
+      state.powerups.push(window.__powerups.spawnPowerup('random', e.x, e.y));
+    } else if (dropRoll < 0.50) {
+      state.powerups.push(window.__powerups.spawnPowerup('gold', e.x, e.y));
+    }
+  } else if (e.type === 'mage') {
+    // Mage: 40% drop (magic stuff)
+    if (dropRoll < 0.15) {
+      state.powerups.push(window.__powerups.spawnPowerup('random', e.x, e.y));
+    } else if (dropRoll < 0.35) {
+      state.powerups.push(window.__powerups.spawnPowerup('gold', e.x, e.y));
+    } else if (dropRoll < 0.40) {
+      state.powerups.push(window.__powerups.spawnPowerup('health', e.x, e.y));
+    }
+  } else if (e.type === 'skeleton') {
+    // Skeleton: 25% drop
+    if (dropRoll < 0.15) {
+      state.powerups.push(window.__powerups.spawnPowerup('gold', e.x, e.y));
+    } else if (dropRoll < 0.25) {
+      state.powerups.push(window.__powerups.spawnPowerup('health', e.x, e.y));
+    }
+  } else if (e.type === 'swarm') {
+    // Swarm: 15% drop (small enemies)
+    if (dropRoll < 0.10) {
+      state.powerups.push(window.__powerups.spawnPowerup('gold', e.x, e.y));
+    } else if (dropRoll < 0.15) {
+      state.powerups.push(window.__powerups.spawnPowerup('speedBoost', e.x, e.y));
+    }
+  } else {
+    // Slime and others: 20% drop
+    if (dropRoll < 0.12) {
+      state.powerups.push(window.__powerups.spawnPowerup('gold', e.x, e.y));
+    } else if (dropRoll < 0.20) {
+      state.powerups.push(window.__powerups.spawnPowerup('health', e.x, e.y));
+    }
+  }
+
+  // Combo bonus: every 5th kill in a combo drops something
+  if (state.combo > 0 && state.combo % 5 === 0) {
+    state.powerups.push(window.__powerups.spawnPowerup('gold', e.x + randRange(-15, 15), e.y + randRange(-15, 15)));
+  }
 
   if (e.type === 'boss') {
     state.screenFlash = 0.5;
