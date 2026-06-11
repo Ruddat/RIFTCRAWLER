@@ -401,6 +401,11 @@ function onEnemyKilled(e) {
   window.__effects.spawnDamageNumber(e.x, e.y, state.combo > 1 ? `x${state.combo}` : '', NEON_YELLOW);
   window.__camera.shakeCamera(e.type === 'boss' ? 15 : 5);
 
+  // --- Blood stain on death ---
+  if (window.__room_addBloodStain) {
+    window.__room_addBloodStain(e.x, e.y);
+  }
+
   // --- Enemy drop table ---
   const dropRoll = Math.random();
   if (e.type === 'boss') {

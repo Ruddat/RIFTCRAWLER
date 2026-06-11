@@ -230,10 +230,10 @@ function updateGame(dt) {
     return;
   }
 
-  // Update systems
+  // Update systems (combat BEFORE enemies so damage is dealt before removal)
   updatePlayer(effectiveDt);
-  updateEnemies(effectiveDt);
   updateCombat();
+  updateEnemies(effectiveDt);
   updateEffects(effectiveDt);
   updatePowerups(effectiveDt);
   updateCamera(effectiveDt);
