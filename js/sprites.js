@@ -6,15 +6,12 @@ const DEFAULT_MANIFEST_URL = 'assets/sprites/riftcrawler-sprites.json';
 
 export const sprites = {
   image: null,
+  rawImage: null,
   manifest: null,
   ready: false,
   failed: false,
 };
 
-/**
- * Loads the default sprite manifest and image.
- * The game keeps working without sprites; renderers can fall back to Canvas primitives.
- */
 export async function loadSprites(manifestUrl = DEFAULT_MANIFEST_URL) {
   if (sprites.ready || sprites.failed) return sprites;
 
@@ -32,14 +29,24 @@ export async function loadSprites(manifestUrl = DEFAULT_MANIFEST_URL) {
     });
 
     sprites.manifest = manifest;
-    sprites.image = image;
+    sprites.rawImage = image;
+    sprites.image = makeBitmapCanvas(image, manifest);
     sprites.ready = true;
     return sprites;
   } catch (error) {
     sprites.failed = true;
-    console.warn('[sprites] Falling back to primitive Canvas rendering:', error);
+    console.warn('[sprites] fallback active:', error);
     return sprites;
   }
+}
+
+function makeBitmapCanvas(image, manifest) {
+  const canvas = document.createElement('canvas');
+  canvas.width = manifest.frameWidth * manifest.columns;
+  canvas.height = manifest.frameHeight * manifest.rows;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return canvas;
 }
 
 export function hasSprite(name) {
@@ -50,14 +57,6 @@ export function getSpriteFrame(name) {
   return sprites.manifest?.frames?.[name] || null;
 }
 
-/**
- * Draws a named sprite centered on x/y.
- * Options:
- * - scale: uniform multiplier, default 1
- * - rotation: radians, default 0
- * - alpha: global alpha multiplier, default 1
- * - flipX / flipY: mirrored draw without changing source frame
- */
 export function drawSprite(ctx, name, x, y, options = {}) {
   if (!hasSprite(name)) return false;
 
