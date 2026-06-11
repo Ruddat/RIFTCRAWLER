@@ -1,0 +1,235 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="256" viewBox="0 0 512 256">
+  <defs>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="2.4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="heavyGlow" x="-120%" y="-120%" width="340%" height="340%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <style>
+      .grid { fill: none; stroke: rgba(255,255,255,.08); stroke-width: 1; }
+      .cyan { fill: #21e6ff; stroke: #ffffff; stroke-width: 1.5; filter: url(#glow); }
+      .cyanDark { fill: #073f50; stroke: #21e6ff; stroke-width: 1.5; filter: url(#glow); }
+      .magenta { fill: #ff2bd6; stroke: #ffffff; stroke-width: 1.2; filter: url(#glow); }
+      .green { fill: #35ff7a; stroke: #caffdc; stroke-width: 1.2; filter: url(#glow); }
+      .red { fill: #ff3355; stroke: #ffd0d8; stroke-width: 1.4; filter: url(#glow); }
+      .orange { fill: #ff9b22; stroke: #fff0d2; stroke-width: 1.4; filter: url(#glow); }
+      .yellow { fill: #ffe66b; filter: url(#glow); }
+      .bone { fill: #ddd7c8; stroke: #ffffff; stroke-width: 1.2; filter: url(#glow); }
+      .dark { fill: #071019; stroke: #21e6ff; stroke-width: 1; }
+      .shadow { fill: rgba(0,0,0,.35); }
+      .label { font-family: monospace; font-size: 6px; fill: rgba(255,255,255,.4); }
+    </style>
+  </defs>
+
+  <!-- Optional cell guide: keep invisible in-game by rendering transparent asset as normal image. -->
+  <g opacity="0">
+    <path class="grid" d="M64 0v256M128 0v256M192 0v256M256 0v256M320 0v256M384 0v256M448 0v256M0 64h512M0 128h512M0 192h512"/>
+  </g>
+
+  <!-- ROW 0: Player top-down directional frames, 64x64 each -->
+  <g id="player-down" transform="translate(32 32)">
+    <ellipse class="shadow" cx="0" cy="10" rx="19" ry="9"/>
+    <path class="cyanDark" d="M0 -22 L18 -2 L11 18 L0 24 L-11 18 L-18 -2 Z"/>
+    <path class="cyan" d="M0 -26 L8 -8 L4 17 L0 24 L-4 17 L-8 -8 Z"/>
+    <circle class="yellow" cx="-7" cy="-5" r="2.4"/>
+    <circle class="yellow" cx="7" cy="-5" r="2.4"/>
+    <path class="magenta" d="M-21 0 L-11 6 L-12 15 L-26 10 Z"/>
+    <path class="magenta" d="M21 0 L11 6 L12 15 L26 10 Z"/>
+  </g>
+
+  <g id="player-right" transform="translate(96 32)">
+    <ellipse class="shadow" cx="-4" cy="10" rx="19" ry="8"/>
+    <path class="cyanDark" d="M24 0 L2 -17 L-18 -10 L-22 0 L-18 10 L2 17 Z"/>
+    <path class="cyan" d="M28 0 L6 -7 L-13 -4 L-22 0 L-13 4 L6 7 Z"/>
+    <circle class="yellow" cx="6" cy="-5" r="2"/>
+    <circle class="yellow" cx="6" cy="5" r="2"/>
+    <path class="magenta" d="M-9 -18 L-3 -11 L-12 -7 L-18 -16 Z"/>
+    <path class="magenta" d="M-9 18 L-3 11 L-12 7 L-18 16 Z"/>
+  </g>
+
+  <g id="player-up" transform="translate(160 32)">
+    <ellipse class="shadow" cx="0" cy="10" rx="19" ry="9"/>
+    <path class="cyanDark" d="M0 -24 L12 -18 L18 2 L9 20 L0 24 L-9 20 L-18 2 L-12 -18 Z"/>
+    <path class="cyan" d="M0 -28 L7 -12 L5 10 L0 22 L-5 10 L-7 -12 Z"/>
+    <path class="magenta" d="M-20 4 L-12 -2 L-13 -13 L-27 -8 Z"/>
+    <path class="magenta" d="M20 4 L12 -2 L13 -13 L27 -8 Z"/>
+    <path class="yellow" d="M-5 15 h10 v3 h-10z"/>
+  </g>
+
+  <g id="player-left" transform="translate(224 32) scale(-1 1)">
+    <ellipse class="shadow" cx="-4" cy="10" rx="19" ry="8"/>
+    <path class="cyanDark" d="M24 0 L2 -17 L-18 -10 L-22 0 L-18 10 L2 17 Z"/>
+    <path class="cyan" d="M28 0 L6 -7 L-13 -4 L-22 0 L-13 4 L6 7 Z"/>
+    <circle class="yellow" cx="6" cy="-5" r="2"/>
+    <circle class="yellow" cx="6" cy="5" r="2"/>
+    <path class="magenta" d="M-9 -18 L-3 -11 L-12 -7 L-18 -16 Z"/>
+    <path class="magenta" d="M-9 18 L-3 11 L-12 7 L-18 16 Z"/>
+  </g>
+
+  <!-- Player attack / dash / damage / pickup variants -->
+  <g id="player-attack" transform="translate(288 32)">
+    <ellipse class="shadow" cx="0" cy="10" rx="20" ry="8"/>
+    <path class="cyanDark" d="M20 0 L0 -16 L-18 -9 L-21 0 L-18 9 L0 16 Z"/>
+    <path class="cyan" d="M25 0 L4 -6 L-12 -3 L-20 0 L-12 3 L4 6 Z"/>
+    <path class="yellow" d="M14 -17 C31 -11 35 5 20 18" fill="none" stroke="#ffe66b" stroke-width="5" stroke-linecap="round" filter="url(#heavyGlow)"/>
+    <path d="M16 -17 C32 -10 34 5 21 17" fill="none" stroke="#fff" stroke-width="1.3" stroke-linecap="round"/>
+  </g>
+
+  <g id="player-dash" transform="translate(352 32)">
+    <path class="cyan" opacity=".35" d="M-30 -15 L-4 -6 L-4 6 L-30 15 Z"/>
+    <path class="cyan" opacity=".55" d="M-20 -12 L7 -5 L7 5 L-20 12 Z"/>
+    <path class="cyanDark" d="M25 0 L3 -15 L-18 -8 L-22 0 L-18 8 L3 15 Z"/>
+    <path class="cyan" d="M30 0 L8 -5 L-12 -2 L-20 0 L-12 2 L8 5 Z"/>
+  </g>
+
+  <g id="player-hit" transform="translate(416 32)">
+    <ellipse class="shadow" cx="0" cy="10" rx="19" ry="9"/>
+    <path class="red" d="M0 -23 L18 -2 L10 19 L0 24 L-10 19 L-18 -2 Z"/>
+    <path class="cyan" opacity=".55" d="M0 -26 L8 -8 L4 17 L0 24 L-4 17 L-8 -8 Z"/>
+    <path d="M-22 -21 L22 21 M22 -21 L-22 21" stroke="#fff" stroke-width="2" opacity=".6"/>
+  </g>
+
+  <g id="player-power" transform="translate(480 32)">
+    <circle cx="0" cy="0" r="29" fill="#ffe66b" opacity=".13" filter="url(#heavyGlow)"/>
+    <ellipse class="shadow" cx="0" cy="10" rx="19" ry="9"/>
+    <path class="cyanDark" d="M0 -22 L18 -2 L11 18 L0 24 L-11 18 L-18 -2 Z"/>
+    <path class="cyan" d="M0 -26 L8 -8 L4 17 L0 24 L-4 17 L-8 -8 Z"/>
+    <circle class="yellow" cx="0" cy="0" r="5"/>
+  </g>
+
+  <!-- ROW 1: Enemies -->
+  <g id="slime" transform="translate(32 96)">
+    <ellipse class="shadow" cx="0" cy="15" rx="20" ry="7"/>
+    <path class="green" d="M-22 8 C-21 -10 -10 -22 3 -21 C17 -20 25 -9 22 9 C18 24 -17 25 -22 8 Z"/>
+    <circle fill="#001014" cx="-7" cy="-2" r="3"/>
+    <circle fill="#001014" cx="8" cy="-1" r="3"/>
+    <path d="M-7 9 C-1 13 7 12 11 7" fill="none" stroke="#001014" stroke-width="2" stroke-linecap="round"/>
+  </g>
+
+  <g id="skeleton" transform="translate(96 96)">
+    <ellipse class="shadow" cx="0" cy="16" rx="17" ry="6"/>
+    <circle class="bone" cx="0" cy="-7" r="16"/>
+    <rect class="bone" x="-5" y="8" width="10" height="22" rx="3"/>
+    <circle fill="#ff3355" cx="-6" cy="-10" r="2.5"/>
+    <circle fill="#ff3355" cx="6" cy="-10" r="2.5"/>
+    <path d="M-6 -1 h12 M-4 5 h8" stroke="#071019" stroke-width="1.5"/>
+    <path d="M13 1 C25 8 25 21 15 29" fill="none" stroke="#b89454" stroke-width="3" stroke-linecap="round" filter="url(#glow)"/>
+  </g>
+
+  <g id="knight" transform="translate(160 96)">
+    <ellipse class="shadow" cx="0" cy="16" rx="21" ry="7"/>
+    <path class="orange" d="M24 0 L3 -24 L-19 -14 L-24 0 L-19 14 L3 24 Z"/>
+    <path class="dark" d="M14 0 L-3 -10 L-13 -5 L-16 0 L-13 5 L-3 10 Z"/>
+    <path d="M-3 -18 L-16 -26 M-3 18 L-16 26" stroke="#ff9b22" stroke-width="4" stroke-linecap="round" filter="url(#glow)"/>
+    <path d="M25 0 h13" stroke="#ffe66b" stroke-width="4" stroke-linecap="round" filter="url(#heavyGlow)"/>
+  </g>
+
+  <g id="swarm" transform="translate(224 96)">
+    <ellipse class="shadow" cx="0" cy="13" rx="14" ry="5"/>
+    <circle class="magenta" cx="0" cy="0" r="12"/>
+    <path d="M-15 -9 L-23 -18 M15 -9 L23 -18 M-14 8 L-23 14 M14 8 L23 14" stroke="#ff2bd6" stroke-width="3" stroke-linecap="round" filter="url(#glow)"/>
+    <circle fill="#fff" cx="-4" cy="-2" r="1.8"/>
+    <circle fill="#fff" cx="4" cy="-2" r="1.8"/>
+  </g>
+
+  <g id="mage" transform="translate(288 96)">
+    <ellipse class="shadow" cx="0" cy="17" rx="18" ry="6"/>
+    <path class="magenta" d="M0 -29 L20 21 L-20 21 Z"/>
+    <path class="cyanDark" d="M0 -19 L10 14 L-10 14 Z"/>
+    <circle class="yellow" cx="0" cy="2" r="6"/>
+    <path d="M-21 24 C-9 29 9 29 21 24" fill="none" stroke="#ff2bd6" stroke-width="3" filter="url(#glow)"/>
+  </g>
+
+  <g id="boss" transform="translate(352 96)">
+    <ellipse class="shadow" cx="0" cy="21" rx="28" ry="8"/>
+    <path class="red" d="M0 -31 L16 -22 L30 -7 L25 14 L9 30 L-9 30 L-25 14 L-30 -7 L-16 -22 Z"/>
+    <path class="dark" d="M0 -18 L12 -10 L17 4 L8 16 L-8 16 L-17 4 L-12 -10 Z"/>
+    <circle class="yellow" cx="0" cy="0" r="7"/>
+    <path d="M-33 -25 L-21 -14 M33 -25 L21 -14 M-36 13 L-25 9 M36 13 L25 9" stroke="#ff3355" stroke-width="5" stroke-linecap="round" filter="url(#heavyGlow)"/>
+  </g>
+
+  <g id="boss-phase2" transform="translate(416 96)">
+    <ellipse class="shadow" cx="0" cy="21" rx="29" ry="8"/>
+    <path class="red" d="M0 -33 L19 -24 L32 -5 L25 18 L6 32 L-6 32 L-25 18 L-32 -5 L-19 -24 Z"/>
+    <path d="M0 -36 V36 M-36 0 H36" stroke="#ff2bd6" stroke-width="4" opacity=".85" filter="url(#heavyGlow)"/>
+    <circle class="yellow" cx="0" cy="0" r="8"/>
+  </g>
+
+  <g id="boss-phase3" transform="translate(480 96)">
+    <circle cx="0" cy="0" r="31" fill="#ff3355" opacity=".18" filter="url(#heavyGlow)"/>
+    <path class="red" d="M0 -34 L22 -25 L34 -2 L25 23 L0 34 L-25 23 L-34 -2 L-22 -25 Z"/>
+    <path d="M-28 -28 L28 28 M28 -28 L-28 28" stroke="#ffe66b" stroke-width="4" filter="url(#heavyGlow)"/>
+    <circle fill="#fff" cx="0" cy="0" r="5" filter="url(#glow)"/>
+  </g>
+
+  <!-- ROW 2: Projectiles / pickups / FX helper sprites -->
+  <g id="bullet" transform="translate(32 160)">
+    <circle class="cyan" cx="0" cy="0" r="8"/>
+    <circle fill="#fff" cx="0" cy="0" r="3"/>
+  </g>
+  <g id="enemy-bullet" transform="translate(96 160)">
+    <circle class="red" cx="0" cy="0" r="8"/>
+    <circle fill="#fff" cx="0" cy="0" r="3"/>
+  </g>
+  <g id="bomb" transform="translate(160 160)">
+    <circle fill="#071019" stroke="#ff3355" stroke-width="3" cx="0" cy="4" r="15" filter="url(#glow)"/>
+    <path d="M-3 -9 C1 -18 11 -19 14 -27" fill="none" stroke="#ffe66b" stroke-width="3" stroke-linecap="round" filter="url(#glow)"/>
+    <circle class="yellow" cx="17" cy="-30" r="3"/>
+  </g>
+  <g id="gold" transform="translate(224 160)">
+    <path class="yellow" d="M0 -22 L20 -7 L13 20 L-13 20 L-20 -7 Z"/>
+    <path d="M-8 -4 h16 M-5 6 h10" stroke="#071019" stroke-width="3" stroke-linecap="round" opacity=".55"/>
+  </g>
+  <g id="heart" transform="translate(288 160)">
+    <path class="red" d="M0 22 C-24 4 -28 -10 -17 -20 C-8 -28 0 -19 0 -13 C0 -19 8 -28 17 -20 C28 -10 24 4 0 22 Z"/>
+  </g>
+  <g id="speed" transform="translate(352 160)">
+    <path class="cyan" d="M-22 18 L-2 -22 L4 -3 L22 -18 L4 22 L-3 3 Z"/>
+  </g>
+  <g id="weapon" transform="translate(416 160)">
+    <path class="magenta" d="M-24 2 L7 -16 L24 -5 L-5 18 Z"/>
+    <circle class="yellow" cx="8" cy="-3" r="4"/>
+  </g>
+  <g id="shield" transform="translate(480 160)">
+    <path class="cyan" d="M0 -26 L23 -15 L18 12 C13 23 4 28 0 30 C-4 28 -13 23 -18 12 L-23 -15 Z" opacity=".75"/>
+    <path d="M0 -19 V21" stroke="#fff" stroke-width="2" opacity=".7"/>
+  </g>
+
+  <!-- ROW 3: Floor markers / doors / chest / rift -->
+  <g id="door" transform="translate(32 224)">
+    <rect x="-24" y="-26" width="48" height="52" rx="6" fill="#071019" stroke="#21e6ff" stroke-width="3" filter="url(#glow)"/>
+    <path d="M-14 -15 h28 M-14 0 h28 M-14 15 h28" stroke="#ff2bd6" stroke-width="2" opacity=".8"/>
+  </g>
+  <g id="chest" transform="translate(96 224)">
+    <rect x="-24" y="-8" width="48" height="28" rx="4" fill="#5b3210" stroke="#ff9b22" stroke-width="3" filter="url(#glow)"/>
+    <path d="M-22 -8 C-18 -27 18 -27 22 -8" fill="#8a4b16" stroke="#ff9b22" stroke-width="3" filter="url(#glow)"/>
+    <rect x="-5" y="1" width="10" height="11" rx="2" class="yellow"/>
+  </g>
+  <g id="rift" transform="translate(160 224)">
+    <ellipse cx="0" cy="0" rx="25" ry="14" fill="#ff2bd6" opacity=".25" filter="url(#heavyGlow)"/>
+    <path d="M-22 0 C-10 -24 12 -24 22 0 C12 24 -10 24 -22 0 Z" fill="#071019" stroke="#ff2bd6" stroke-width="4" filter="url(#heavyGlow)"/>
+    <path d="M-5 -18 C2 -6 -7 6 6 18" stroke="#21e6ff" stroke-width="3" fill="none" filter="url(#glow)"/>
+  </g>
+  <g id="stairs" transform="translate(224 224)">
+    <path d="M-26 19 H26 V10 H14 V1 H2 V-8 H-10 V-17 H-26 Z" fill="#071019" stroke="#21e6ff" stroke-width="3" filter="url(#glow)"/>
+  </g>
+  <g id="trap" transform="translate(288 224)">
+    <path class="red" d="M0 -25 L27 23 H-27 Z" opacity=".8"/>
+    <path d="M0 -10 V8" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+    <circle fill="#fff" cx="0" cy="16" r="2.5"/>
+  </g>
+  <g id="exit" transform="translate(352 224)">
+    <circle cx="0" cy="0" r="25" fill="#35ff7a" opacity=".12" filter="url(#heavyGlow)"/>
+    <path d="M-21 -21 H21 V21 H-21 Z" fill="#071019" stroke="#35ff7a" stroke-width="3" filter="url(#glow)"/>
+    <path d="M-7 -10 L8 0 L-7 10 Z" fill="#35ff7a" filter="url(#glow)"/>
+  </g>
+</svg>
