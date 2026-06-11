@@ -43,8 +43,9 @@ const POWERUP_TYPES = [
  */
 export function spawnPowerup(type, x, y) {
   if (type === 'random') {
-    const pick = weightedPick(POWERUP_TYPES);
-    return createPowerup(pick, x, y);
+    const itemName = weightedPick(POWERUP_TYPES);   // returns string like 'orbital'
+    const def = POWERUP_TYPES.find(p => p.item === itemName);
+    return createPowerup(def || POWERUP_TYPES[0], x, y);
   }
   // Find specific type definition
   const def = POWERUP_TYPES.find(p => p.item === type);
