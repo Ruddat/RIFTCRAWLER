@@ -62,6 +62,34 @@ export function updateCombat() {
     let hitSomething = false;
     for (const e of state.enemies) {
       if (dist(b.x, b.y, e.x, e.y) < b.size + e.size) {
+        // Rocket explosion!
+        if (b.isRocket) {
+          const rDmg = b.rocketDamage || 5;
+          const rRadius = b.rocketRadius || 100;
+          spawnParticles(b.x, b.y, '#ff8800', 25, 120, 0.7);
+          spawnParticles(b.x, b.y, NEON_RED, 15, 80, 0.5);
+          spawnParticles(b.x, b.y, NEON_YELLOW, 10, 60, 0.4);
+          shakeCamera(10);
+          state.screenFlash = 0.3;
+          state.flashColor = '#ff8800';
+          spawnDamageNumber(b.x, b.y - 10, 'BOOM!', '#ff8800');
+          // Area damage
+          for (const ae of state.enemies) {
+            const d = dist(b.x, b.y, ae.x, ae.y);
+            if (d < rRadius) {
+              const dmgScale = 1 - (d / rRadius) * 0.5;  // less damage at edge
+              const finalDmg = Math.max(1, Math.floor(rDmg * dmgScale));
+              ae.hp -= finalDmg;
+              ae.hitFlash = 1;
+              applyKnockback(ae, Math.atan2(ae.y - b.y, ae.x - b.x), KNOCKBACK_FORCE * 2);
+              spawnDamageNumber(ae.x, ae.y - 10, finalDmg, '#ff8800');
+            }
+          }
+          state.enemyBullets = state.enemyBullets.filter(eb => dist(b.x, b.y, eb.x, eb.y) > rRadius);
+          hitSomething = true;
+          break;
+        }
+
         e.hp -= b.damage;
         e.hitFlash = 1;
         applyKnockback(e, Math.atan2(b.vy, b.vx), KNOCKBACK_FORCE * 0.6);

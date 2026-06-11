@@ -9,7 +9,7 @@ import {
   ROOM_WIDTH, ROOM_HEIGHT, WALL_THICKNESS, NEON_BLUE, NEON_GREEN, NEON_RED, NEON_YELLOW,
 } from './config.js';
 import { state } from './state.js';
-import { getMovement, consumeAttack, consumeDash, consumeShoot, consumeBomb, getMousePos } from './input.js';
+import { getMovement, consumeAttack, consumeDash, consumeShoot, consumeBomb, consumeSpecial, getMousePos } from './input.js';
 import { isWallAt, resolveWallCollision, checkDoorTransition, getDoorEntryPoint, oppositeDir, getCurrentRoom } from './room.js';
 import { clamp, angleBetween, dist, randRange } from './utils.js';
 import { spawnParticles, spawnDamageNumber } from './effects.js';
@@ -251,6 +251,19 @@ export function updatePlayer(dt) {
     spawnBomb(p.x, p.y);
   }
 
+  // --- Special Weapon (R key) ---
+  if (p.specialCooldown > 0) p.specialCooldown -= dt;
+  if (p.laserActive) {
+    p.laserTimer -= dt;
+    if (p.laserTimer <= 0) {
+      p.laserActive = false;
+    }
+  }
+
+  if (consumeSpecial() && p.specialWeapon && p.specialAmmo > 0 && p.specialCooldown <= 0) {
+    fireSpecialWeapon();
+  }
+
   // --- Check door transition ---
   if (!state.transitioning && state.doorsOpen) {
     const doorDir = checkDoorTransition(p.x, p.y);
@@ -285,6 +298,213 @@ function spawnBomb(bx, by) {
   }
 
   state.enemyBullets = [];
+}
+
+// ============================================================
+// Special Weapons
+// ============================================================
+
+function fireSpecialWeapon() {
+  const p = state.player;
+  p.specialAmmo--;
+
+  switch (p.specialWeapon) {
+    case 'laser':     fireLaser(p); break;
+    case 'rocket':    fireRocket(p); break;
+    case 'flamethrower': fireFlamethrower(p); break;
+    case 'lightningBolt': fireLightningBolt(p); break;
+  }
+
+  if (p.specialAmmo <= 0) {
+    p.specialWeapon = null;
+    p.specialAmmo = 0;
+  }
+}
+
+/** LASER LANZE - Piercing beam through all enemies */
+function fireLaser(p) {
+  p.laserActive = true;
+  p.laserAngle = p.facing;
+  p.laserTimer = 0.4;
+  p.specialCooldown = 0.5;
+
+  // Hit all enemies in a line
+  const range = 600;
+  for (const e of state.enemies) {
+    const d = dist(p.x, p.y, e.x, e.y);
+    if (d > range) continue;
+    // Check if enemy is near the laser line
+    const angleToEnemy = Math.atan2(e.y - p.y, e.x - p.x);
+    let angleDiff = angleToEnemy - p.facing;
+    while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+    while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+    const perpDist = Math.abs(d * Math.sin(angleDiff));
+    if (perpDist < e.size + 10 && Math.abs(angleDiff) < Math.PI / 3) {
+      const dmg = 4 + p.weaponLevel;
+      e.hp -= dmg;
+      e.hitFlash = 1;
+      spawnParticles(e.x, e.y, '#ff0066', 6, 60, 0.3);
+      spawnDamageNumber(e.x, e.y - 10, dmg, '#ff0066');
+    }
+  }
+
+  shakeCamera(4);
+  spawnParticles(p.x + Math.cos(p.facing) * 20, p.y + Math.sin(p.facing) * 20, '#ff0066', 10, 80, 0.4);
+  playSfx('laser');
+}
+
+/** RAKETENWERFER - Explosive projectile */
+function fireRocket(p) {
+  p.specialCooldown = 0.8;
+  state.bullets.push({
+    x: p.x + Math.cos(p.facing) * 16,
+    y: p.y + Math.sin(p.facing) * 16,
+    vx: Math.cos(p.facing) * 250,
+    vy: Math.sin(p.facing) * 250,
+    size: 8,
+    damage: 1,  // direct hit is small, explosion is big
+    life: 3.0,
+    piercing: false,
+    color: '#ff8800',
+    isRocket: true,   // special flag for explosion on hit
+    rocketDamage: 5 + p.weaponLevel * 2,
+    rocketRadius: 100,
+  });
+  spawnParticles(p.x + Math.cos(p.facing) * 20, p.y + Math.sin(p.facing) * 20, '#ff8800', 8, 60, 0.3);
+  shakeCamera(3);
+  playSfx('rocket');
+}
+
+/** FLAMMENWERFER - Short range cone of fire */
+function fireFlamethrower(p) {
+  p.specialCooldown = 0.15;
+  const spread = 0.5;  // wide cone
+  const range = 100;
+
+  // Spawn fire particles
+  for (let i = 0; i < 5; i++) {
+    const a = p.facing + randRange(-spread, spread);
+    const spd = randRange(150, 300);
+    state.particles.push({
+      x: p.x + Math.cos(a) * 15,
+      y: p.y + Math.sin(a) * 15,
+      vx: Math.cos(a) * spd,
+      vy: Math.sin(a) * spd,
+      life: 0.4,
+      maxLife: 0.4,
+      color: Math.random() < 0.5 ? '#ff4400' : '#ff8800',
+      size: randRange(4, 8),
+      friction: 0.92,
+    });
+  }
+
+  // Damage enemies in cone
+  for (const e of state.enemies) {
+    const d = dist(p.x, p.y, e.x, e.y);
+    if (d > range) continue;
+    const angleToEnemy = Math.atan2(e.y - p.y, e.x - p.x);
+    let angleDiff = angleToEnemy - p.facing;
+    while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+    while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+    if (Math.abs(angleDiff) < spread && !e._flameHit) {
+      e._flameHit = true;
+      const dmg = 2;
+      e.hp -= dmg;
+      e.hitFlash = 0.3;
+      spawnDamageNumber(e.x, e.y - 10, dmg, '#ff4400');
+      // Set enemy on fire (damage over time)
+      e.burning = 3;  // 3 ticks
+      e.burnTimer = 0;
+    }
+  }
+  for (const e of state.enemies) e._flameHit = false;
+  playSfx('flame');
+}
+
+/** BLITZSCHLAG - Instant hit nearest enemy, chains */
+function fireLightningBolt(p) {
+  p.specialCooldown = 0.6;
+
+  // Find nearest enemy
+  let nearest = null;
+  let nearDist = 400;
+  for (const e of state.enemies) {
+    const d = dist(p.x, p.y, e.x, e.y);
+    if (d < nearDist) {
+      nearDist = d;
+      nearest = e;
+    }
+  }
+
+  if (!nearest) {
+    // No target - fire in facing direction as a bolt
+    spawnParticles(p.x + Math.cos(p.facing) * 40, p.y + Math.sin(p.facing) * 40, '#ffff00', 8, 50, 0.3);
+    return;
+  }
+
+  // Zap the target
+  const dmg = 5 + p.weaponLevel;
+  nearest.hp -= dmg;
+  nearest.hitFlash = 1;
+  spawnDamageNumber(nearest.x, nearest.y - 10, dmg, '#ffff00');
+
+  // Visual lightning from player to target
+  spawnLightningParticles(p.x, p.y, nearest.x, nearest.y, '#ffff00');
+
+  // Chain to up to 3 more enemies
+  const hit = new Set([nearest]);
+  let current = nearest;
+  for (let chain = 0; chain < 3; chain++) {
+    let nextNearest = null;
+    let nextDist = 150;
+    for (const e of state.enemies) {
+      if (hit.has(e)) continue;
+      const d = dist(current.x, current.y, e.x, e.y);
+      if (d < nextDist) {
+        nextDist = d;
+        nextNearest = e;
+      }
+    }
+    if (!nextNearest) break;
+    hit.add(nextNearest);
+    const chainDmg = Math.max(1, Math.floor(dmg * 0.6));
+    nextNearest.hp -= chainDmg;
+    nextNearest.hitFlash = 1;
+    spawnDamageNumber(nextNearest.x, nextNearest.y - 10, chainDmg, '#ffff00');
+    spawnLightningParticles(current.x, current.y, nextNearest.x, nextNearest.y, '#ffff44');
+    current = nextNearest;
+  }
+
+  shakeCamera(6);
+  state.screenFlash = 0.15;
+  state.flashColor = '#ffff00';
+  playSfx('lightning');
+}
+
+function spawnLightningParticles(x1, y1, x2, y2, color) {
+  const steps = 6;
+  for (let i = 0; i < steps; i++) {
+    const t = i / steps;
+    const x = x1 + (x2 - x1) * t + randRange(-8, 8);
+    const y = y1 + (y2 - y1) * t + randRange(-8, 8);
+    state.particles.push({
+      x, y,
+      vx: randRange(-20, 20),
+      vy: randRange(-20, 20),
+      life: 0.3,
+      maxLife: 0.3,
+      color,
+      size: randRange(3, 6),
+      friction: 0.9,
+    });
+  }
+}
+
+// Simple playSfx proxy (uses audio.js via window)
+function playSfx(name) {
+  if (window.__audio && window.__audio.playSfx) {
+    window.__audio.playSfx(name);
+  }
 }
 
 /** Transition to a new room */
@@ -373,7 +593,12 @@ function updateBullets(dt) {
     b.life -= dt;
 
     if (b.life <= 0 || isWallAt(b.x, b.y, b.size)) {
-      spawnParticles(b.x, b.y, b.color, 3, 30, 0.2);
+      // Rockets explode on wall hit too
+      if (b.isRocket) {
+        explodeRocket(b);
+      } else {
+        spawnParticles(b.x, b.y, b.color, 3, 30, 0.2);
+      }
       state.bullets.splice(i, 1);
     }
   }
@@ -387,6 +612,29 @@ function updateBullets(dt) {
     if (b.life <= 0 || isWallAt(b.x, b.y, b.size)) {
       spawnParticles(b.x, b.y, b.color || NEON_RED, 3, 30, 0.2);
       state.enemyBullets.splice(i, 1);
+    }
+  }
+}
+
+/** Explode a rocket at its current position */
+function explodeRocket(b) {
+  const rDmg = b.rocketDamage || 5;
+  const rRadius = b.rocketRadius || 100;
+  spawnParticles(b.x, b.y, '#ff8800', 25, 120, 0.7);
+  spawnParticles(b.x, b.y, NEON_RED, 15, 80, 0.5);
+  spawnParticles(b.x, b.y, NEON_YELLOW, 10, 60, 0.4);
+  shakeCamera(10);
+  state.screenFlash = 0.3;
+  state.flashColor = '#ff8800';
+  spawnDamageNumber(b.x, b.y - 10, 'BOOM!', '#ff8800');
+  for (const ae of state.enemies) {
+    const d = dist(b.x, b.y, ae.x, ae.y);
+    if (d < rRadius) {
+      const dmgScale = 1 - (d / rRadius) * 0.5;
+      const finalDmg = Math.max(1, Math.floor(rDmg * dmgScale));
+      ae.hp -= finalDmg;
+      ae.hitFlash = 1;
+      spawnDamageNumber(ae.x, ae.y - 10, finalDmg, '#ff8800');
     }
   }
 }
@@ -451,6 +699,50 @@ export function drawPlayer(ctx) {
   ctx.shadowBlur = 0;
   ctx.restore();
   ctx.globalAlpha = 1;
+
+  // --- Laser beam ---
+  if (p.laserActive) {
+    ctx.save();
+    const beamLen = 600;
+    const endX = p.x + Math.cos(p.laserAngle) * beamLen;
+    const endY = p.y + Math.sin(p.laserAngle) * beamLen;
+
+    // Outer glow
+    ctx.strokeStyle = '#ff0066';
+    ctx.shadowColor = '#ff0066';
+    ctx.shadowBlur = 25;
+    ctx.lineWidth = 12;
+    ctx.globalAlpha = 0.3;
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+
+    // Core beam
+    ctx.strokeStyle = '#ff3388';
+    ctx.shadowBlur = 15;
+    ctx.lineWidth = 4;
+    ctx.globalAlpha = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+
+    // White hot center
+    ctx.strokeStyle = '#fff';
+    ctx.shadowColor = '#fff';
+    ctx.shadowBlur = 8;
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 1;
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+
+    ctx.shadowBlur = 0;
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
 
   // --- Shield orb ---
   if (p.shield) {

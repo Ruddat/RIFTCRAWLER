@@ -144,6 +144,23 @@ export function updateEnemies(dt) {
 
     if (e.hitFlash > 0) e.hitFlash -= dt * 5;
 
+    // Burning (damage over time from flamethrower)
+    if (e.burning && e.burning > 0) {
+      e.burnTimer += dt;
+      if (e.burnTimer >= 0.5) {
+        e.burnTimer = 0;
+        e.burning--;
+        e.hp -= 1;
+        e.hitFlash = 0.3;
+        window.__effects.spawnParticles(e.x, e.y, '#ff4400', 3, 30, 0.2);
+        window.__effects.spawnDamageNumber(e.x, e.y - 5, 1, '#ff4400');
+      }
+      // Fire visual
+      if (Math.random() < 0.2) {
+        window.__effects.spawnParticles(e.x, e.y, '#ff8800', 1, 20, 0.2);
+      }
+    }
+
     // Knockback
     if (e.knockbackTimer > 0) {
       e.knockbackTimer -= dt;

@@ -31,6 +31,7 @@ window.__room_getCurrentRoom = getCurrentRoom;
 window.__enemies_spawnEnemy = spawnEnemy;
 window.__powerups_spawnPowerup = spawnPowerup;
 window.__powerups_applyEffect = applyPowerupEffect;
+window.__audio = { playSfx };
 
 // ============================================================
 // Canvas Setup
@@ -149,8 +150,8 @@ function renderTitle() {
   const y = CANVAS_HEIGHT / 2 + 170;
   ctx.fillText('WASD / Pfeiltasten – Bewegen', CANVAS_WIDTH / 2, y);
   ctx.fillText('LEERTASTE – Schwertangriff', CANVAS_WIDTH / 2, y + 18);
-  ctx.fillText('E – Schießen    Q – Bombe    SHIFT – Dash', CANVAS_WIDTH / 2, y + 36);
-  ctx.fillText('P – Pause    F – Vollbild', CANVAS_WIDTH / 2, y + 54);
+  ctx.fillText('E – Schießen    Q – Bombe    R – Spezialwaffe', CANVAS_WIDTH / 2, y + 36);
+  ctx.fillText('SHIFT – Dash    P – Pause    F – Vollbild', CANVAS_WIDTH / 2, y + 54);
 
   ctx.restore();
 }

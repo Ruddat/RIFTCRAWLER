@@ -15,23 +15,29 @@ import { weightedPick, randRange } from './utils.js';
 
 const POWERUP_TYPES = [
   // --- Common ---
-  { item: 'health',      weight: 22, color: NEON_RED,    label: '+HP',   desc: 'Heilt 2 HP' },
-  { item: 'gold',        weight: 18, color: NEON_YELLOW, label: 'GOLD',  desc: '+10-25 Gold' },
+  { item: 'health',      weight: 20, color: NEON_RED,    label: '+HP',   desc: 'Heilt 2 HP' },
+  { item: 'gold',        weight: 16, color: NEON_YELLOW, label: 'GOLD',  desc: '+10-25 Gold' },
 
   // --- Uncommon ---
-  { item: 'shield',      weight: 10, color: NEON_BLUE,   label: 'SHLD',  desc: 'Schild fuer 8 Sek' },
-  { item: 'speedBoost',  weight: 10, color: NEON_YELLOW, label: 'SPD',   desc: 'Schneller fuer 10s' },
-  { item: 'bomb',        weight: 14, color: NEON_ORANGE, label: 'BMB',   desc: '+1 Bombe' },
-  { item: 'orbital',     weight: 10, color: '#00ccff',   label: 'ORB',   desc: 'Orbitalkugel!' },
-  { item: 'berserk',     weight: 7,  color: '#ff4444',   label: 'BSRK',  desc: 'Berserker-Modus!' },
+  { item: 'shield',      weight: 8, color: NEON_BLUE,   label: 'SHLD',  desc: 'Schild fuer 8 Sek' },
+  { item: 'speedBoost',  weight: 8, color: NEON_YELLOW, label: 'SPD',   desc: 'Schneller fuer 10s' },
+  { item: 'bomb',        weight: 12, color: NEON_ORANGE, label: 'BMB',   desc: '+1 Bombe' },
+  { item: 'orbital',     weight: 8, color: '#00ccff',   label: 'ORB',   desc: 'Orbitalkugel!' },
+  { item: 'berserk',     weight: 6,  color: '#ff4444',   label: 'BSRK',  desc: 'Berserker!' },
+
+  // --- Weapons (R key) ---
+  { item: 'laser',       weight: 5,  color: '#ff0066',   label: 'LASER', desc: 'Laser Lanze x5' },
+  { item: 'rocket',      weight: 5,  color: '#ff8800',   label: 'RAKET', desc: 'Raketenwerfer x3' },
+  { item: 'flamethrower', weight: 5,  color: '#ff4400',  label: 'FEUER', desc: 'Flammenwerfer x8' },
+  { item: 'lightningBolt', weight: 4, color: '#ffff00',  label: 'BLITZ', desc: 'Blitzschlag x4' },
 
   // --- Rare ---
-  { item: 'extraLife',   weight: 4,  color: '#ff66aa',   label: '1UP',   desc: 'Extra Leben!' },
-  { item: 'weaponUp',    weight: 7,  color: NEON_PURPLE, label: 'WPN+',  desc: 'Waffen-Upgrade' },
-  { item: 'maxHealth',   weight: 5,  color: '#ff4488',   label: '+MAX',  desc: '+1 Max HP' },
-  { item: 'timeSlow',    weight: 5,  color: '#aaaaff',   label: 'SLOW',  desc: 'Zeitlupe 8s' },
-  { item: 'chainLightning', weight: 4, color: '#44ffff', label: 'CHN',   desc: 'Kettenblitz!' },
-  { item: 'magnet',      weight: 7,  color: '#88ffcc',   label: 'MAG',   desc: 'Magnet fuer 15s' },
+  { item: 'extraLife',   weight: 3,  color: '#ff66aa',   label: '1UP',   desc: 'Extra Leben!' },
+  { item: 'weaponUp',    weight: 6,  color: NEON_PURPLE, label: 'WPN+',  desc: 'Waffen-Upgrade' },
+  { item: 'maxHealth',   weight: 4,  color: '#ff4488',   label: '+MAX',  desc: '+1 Max HP' },
+  { item: 'timeSlow',    weight: 4,  color: '#aaaaff',   label: 'SLOW',  desc: 'Zeitlupe 8s' },
+  { item: 'chainLightning', weight: 3, color: '#44ffff', label: 'CHN',   desc: 'Kettenblitz!' },
+  { item: 'magnet',      weight: 6,  color: '#88ffcc',   label: 'MAG',   desc: 'Magnet fuer 15s' },
 
   // --- Legendary ---
   { item: 'nuke',        weight: 2,  color: '#ffffff',   label: 'NUKE',  desc: 'Alles explodiert!' },
@@ -57,7 +63,7 @@ export function spawnPowerup(type, x, y) {
 }
 
 function createPowerup(def, x, y) {
-  const isRare = ['nuke', 'extraLife', 'weaponUp', 'chainLightning', 'timeSlow'].includes(def.item);
+  const isRare = ['nuke', 'extraLife', 'weaponUp', 'chainLightning', 'timeSlow', 'laser', 'rocket', 'flamethrower', 'lightningBolt'].includes(def.item);
   return {
     x, y,
     effect: def.item,
@@ -210,6 +216,45 @@ export function applyPowerupEffect(pw) {
       window.__effects.spawnDamageNumber(p.x, p.y - 20, 'KETTENBLITZ!', '#44ffff');
       p.powerupGlow = 1.0;
       window.__camera.shakeCamera(5);
+      break;
+
+    // --- Special Weapons (R key) ---
+    case 'laser':
+      p.specialWeapon = 'laser';
+      p.specialAmmo += 5;
+      window.__effects.spawnDamageNumber(p.x, p.y - 20, 'LASER LANZE!', '#ff0066');
+      p.powerupGlow = 1.5;
+      window.__camera.shakeCamera(6);
+      state.screenFlash = 0.2;
+      state.flashColor = '#ff0066';
+      break;
+
+    case 'rocket':
+      p.specialWeapon = 'rocket';
+      p.specialAmmo += 3;
+      window.__effects.spawnDamageNumber(p.x, p.y - 20, 'RAKETENWERFER!', '#ff8800');
+      p.powerupGlow = 1.5;
+      window.__camera.shakeCamera(6);
+      break;
+
+    case 'flamethrower':
+      p.specialWeapon = 'flamethrower';
+      p.specialAmmo += 8;
+      window.__effects.spawnDamageNumber(p.x, p.y - 20, 'FLAMMENWERFER!', '#ff4400');
+      p.powerupGlow = 1.5;
+      window.__camera.shakeCamera(4);
+      state.screenFlash = 0.15;
+      state.flashColor = '#ff4400';
+      break;
+
+    case 'lightningBolt':
+      p.specialWeapon = 'lightningBolt';
+      p.specialAmmo += 4;
+      window.__effects.spawnDamageNumber(p.x, p.y - 20, 'BLITZSCHLAG!', '#ffff00');
+      p.powerupGlow = 1.5;
+      window.__camera.shakeCamera(8);
+      state.screenFlash = 0.2;
+      state.flashColor = '#ffff00';
       break;
 
     case 'nuke':

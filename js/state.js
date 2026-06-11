@@ -88,6 +88,16 @@ export const state = {
     chainRange: 100,            // chain range in pixels
     chainDamage: 0.5,           // fraction of original damage
 
+    // --- Special Weapon (R key) ---
+    specialWeapon: null,        // null | 'laser' | 'rocket' | 'flamethrower' | 'lightningBolt'
+    specialAmmo: 0,             // uses left
+    specialCooldown: 0,         // cooldown between shots
+
+    // --- Laser beam (active while firing) ---
+    laserActive: false,
+    laserAngle: 0,
+    laserTimer: 0,
+
     // --- Visual ---
     powerupGlow: 0,         // timer for glow effect on pickup
     levelUpFlash: 0,        // timer for weapon level-up flash
@@ -222,6 +232,14 @@ export function resetState() {
   // Chain Lightning
   p.chainLightning = false;
   p.chainLightningTimer = 0;
+
+  // Special Weapon
+  p.specialWeapon = null;
+  p.specialAmmo = 0;
+  p.specialCooldown = 0;
+  p.laserActive = false;
+  p.laserAngle = 0;
+  p.laserTimer = 0;
 
   // Visual
   p.powerupGlow = 0;

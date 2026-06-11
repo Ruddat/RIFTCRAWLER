@@ -16,6 +16,7 @@ let _attackPressed = false;
 let _dashPressed = false;
 let _shootPressed = false;
 let _bombPressed = false;
+let _specialPressed = false;
 let _interactPressed = false;
 let _startPressed = false;
 
@@ -34,6 +35,7 @@ export function initInput() {
     if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') _dashPressed = true;
     if (e.code === 'KeyE') _shootPressed = true;
     if (e.code === 'KeyQ') _bombPressed = true;
+    if (e.code === 'KeyR') _specialPressed = true;
     if (e.code === 'Enter') { _startPressed = true; _interactPressed = true; }
     state.lastInputMode = 'keyboard';
   });
@@ -168,6 +170,11 @@ export function consumeShoot() {
 
 export function consumeBomb() {
   if (_bombPressed) { _bombPressed = false; return true; }
+  return false;
+}
+
+export function consumeSpecial() {
+  if (_specialPressed) { _specialPressed = false; return true; }
   return false;
 }
 

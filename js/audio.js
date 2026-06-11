@@ -76,6 +76,23 @@ export function playSfx(type) {
       setTimeout(() => playSweep(ctx, 500, 800, 0.15, 'sine', 0.15), 150);
       setTimeout(() => playTone(ctx, 700, 0.2, 'sine', 0.15), 300);
       break;
+    case 'laser':
+      playSweep(ctx, 800, 200, 0.3, 'sawtooth', 0.2);
+      playTone(ctx, 1200, 0.15, 'square', 0.1);
+      break;
+    case 'rocket':
+      playSweep(ctx, 150, 400, 0.15, 'sawtooth', 0.15);
+      setTimeout(() => { playNoise(ctx, 0.3, 0.25); playTone(ctx, 60, 0.25, 'sawtooth', 0.2); }, 200);
+      break;
+    case 'flame':
+      playNoise(ctx, 0.15, 0.15);
+      playTone(ctx, 100, 0.1, 'sawtooth', 0.1);
+      break;
+    case 'lightning':
+      playTone(ctx, 2000, 0.05, 'square', 0.2);
+      setTimeout(() => playSweep(ctx, 1500, 200, 0.2, 'sawtooth', 0.2), 30);
+      setTimeout(() => playTone(ctx, 100, 0.1, 'square', 0.1), 100);
+      break;
   }
 }
 

@@ -115,6 +115,45 @@ export function drawHud(ctx) {
   ctx.fillStyle = NEON_YELLOW;
   ctx.fillText('G:' + p.gold, CANVAS_WIDTH - 40, 18);
 
+  // --- Special Weapon (R key) ---
+  if (p.specialWeapon) {
+    const weaponNames = {
+      laser: 'LASER',
+      rocket: 'RAKETE',
+      flamethrower: 'FEUER',
+      lightningBolt: 'BLITZ',
+    };
+    const weaponColors = {
+      laser: '#ff0066',
+      rocket: '#ff8800',
+      flamethrower: '#ff4400',
+      lightningBolt: '#ffff00',
+    };
+    const wName = weaponNames[p.specialWeapon] || '?';
+    const wColor = weaponColors[p.specialWeapon] || '#fff';
+
+    ctx.fillStyle = wColor;
+    ctx.shadowColor = wColor;
+    ctx.shadowBlur = 6;
+    ctx.font = 'bold 11px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText('R: ' + wName + ' x' + p.specialAmmo, CANVAS_WIDTH - 16, 36);
+
+    // Ammo bar
+    const ammoBarX = CANVAS_WIDTH - 80;
+    const ammoBarY = 42;
+    const ammoBarW = 64;
+    const ammoBarH = 4;
+    const maxAmmo = { laser: 5, rocket: 3, flamethrower: 8, lightningBolt: 4 }[p.specialWeapon] || 5;
+    const ammoFrac = p.specialAmmo / maxAmmo;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.fillRect(ammoBarX, ammoBarY, ammoBarW, ammoBarH);
+    ctx.fillStyle = wColor;
+    ctx.fillRect(ammoBarX, ammoBarY, ammoBarW * ammoFrac, ammoBarH);
+    ctx.shadowBlur = 0;
+  }
+
   // --- Active Buff Icons (bottom left) ---
   drawActiveBuffs(ctx, p);
 
