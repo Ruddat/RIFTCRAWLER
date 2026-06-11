@@ -10,6 +10,17 @@
 </head>
 <body>
   <canvas id="gameCanvas"></canvas>
+  <script>
+    // Compatibility guard for older renderer code paths that still use globals.
+    var NEON_PURPLE = '#b44dff';
+    var KNOCKBACK_FORCE = 200;
+    var KNOCKBACK_DURATION = 0.15;
+    var playSfx = function (...args) {
+      if (window.__audio && typeof window.__audio.playSfx === 'function') {
+        return window.__audio.playSfx(...args);
+      }
+    };
+  </script>
   <script type="module" src="js/main.js"></script>
   <script type="module" src="js/sprite-overlay-autoload.js"></script>
 </body>
