@@ -1,372 +1,397 @@
 // ============================================================
-// RIFT CRAWLER – HUD Overlay (Health, Shield, Lives, Weapon, Minimap)
+// RIFT CRAWLER – Neon HUD Overlay
 // ============================================================
 
 import {
   CANVAS_WIDTH, CANVAS_HEIGHT, DUNGEON_GRID,
   NEON_BLUE, NEON_GREEN, NEON_RED, NEON_YELLOW, NEON_PURPLE, NEON_ORANGE,
-  DARK_BG,
 } from './config.js';
 import { state } from './state.js';
 
-// ============================================================
-// Drawing
-// ============================================================
+const PANEL = 'rgba(5, 8, 18, 0.72)';
+const PANEL_DARK = 'rgba(3, 5, 12, 0.88)';
+const TEXT_DIM = 'rgba(210, 235, 255, 0.55)';
+const TEXT_SOFT = 'rgba(235, 248, 255, 0.84)';
 
 export function drawHud(ctx) {
   const p = state.player;
-
-  // --- Top bar background ---
-  ctx.fillStyle = 'rgba(10, 10, 20, 0.85)';
-  ctx.fillRect(0, 0, CANVAS_WIDTH, 50);
-  ctx.strokeStyle = 'rgba(0, 212, 255, 0.3)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(0, 50);
-  ctx.lineTo(CANVAS_WIDTH, 50);
-  ctx.stroke();
-
-  // --- Health hearts ---
-  const heartStartX = 16;
-  const heartY = 16;
-  for (let i = 0; i < p.maxHp; i++) {
-    const hx = heartStartX + i * 20;
-    if (i < p.hp) {
-      drawHeart(ctx, hx, heartY, 7, NEON_RED);
-    } else {
-      drawHeart(ctx, hx, heartY, 7, 'rgba(255,255,255,0.12)');
-    }
-  }
-
-  // --- Extra lives ---
-  if (p.lives > 0) {
-    ctx.fillStyle = '#ff66aa';
-    ctx.shadowColor = '#ff66aa';
-    ctx.shadowBlur = 4;
-    ctx.font = 'bold 11px monospace';
-    ctx.textAlign = 'left';
-    const livesX = heartStartX + p.maxHp * 20 + 8;
-    ctx.fillText('x' + (p.lives + 1), livesX, heartY + 8);
-    ctx.shadowBlur = 0;
-  }
-
-  // --- Shield bar ---
-  if (p.shield) {
-    const shieldX = heartStartX;
-    const shieldY = 36;
-    const shieldW = 100;
-    const shieldH = 5;
-    const shieldFrac = p.shieldTimer / p.shieldMaxTime;
-
-    ctx.fillStyle = 'rgba(0,0,0,0.4)';
-    ctx.fillRect(shieldX, shieldY, shieldW, shieldH);
-    ctx.fillStyle = NEON_BLUE;
-    ctx.shadowColor = NEON_BLUE;
-    ctx.shadowBlur = 6;
-    ctx.fillRect(shieldX, shieldY, shieldW * shieldFrac, shieldH);
-    ctx.shadowBlur = 0;
-
-    ctx.fillStyle = 'rgba(0, 212, 255, 0.5)';
-    ctx.font = '8px monospace';
-    ctx.fillText('SHIELD', shieldX + shieldW + 6, shieldY + 5);
-  }
-
-  // --- Floor & Room info ---
-  ctx.fillStyle = NEON_BLUE;
-  ctx.font = 'bold 13px monospace';
-  ctx.textAlign = 'center';
-  ctx.shadowColor = NEON_BLUE;
-  ctx.shadowBlur = 6;
   const room = window.__room_getCurrentRoom ? window.__room_getCurrentRoom() : null;
-  const floorName = room ? room.theme.name : '';
-  ctx.fillText('ETAGE ' + state.floor + ' - ' + floorName, CANVAS_WIDTH / 2, 18);
-  ctx.shadowBlur = 0;
 
-  ctx.fillStyle = 'rgba(255,255,255,0.4)';
-  ctx.font = '10px monospace';
-  const roomType = room ? room.type.toUpperCase() : '';
-  ctx.fillText(roomType, CANVAS_WIDTH / 2, 34);
+  ctx.save();
+  ctx.textBaseline = 'alphabetic';
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
 
-  // --- Score ---
-  ctx.textAlign = 'right';
-  ctx.fillStyle = NEON_YELLOW;
-  ctx.font = 'bold 14px monospace';
-  ctx.shadowColor = NEON_YELLOW;
-  ctx.shadowBlur = 4;
-  ctx.fillText('' + state.score, CANVAS_WIDTH - 100, 18);
-  ctx.shadowBlur = 0;
-
-  // --- Weapon Level ---
-  const wpnColors = ['', NEON_BLUE, NEON_GREEN, NEON_YELLOW, NEON_ORANGE, NEON_PURPLE];
-  const wpnColor = wpnColors[p.weaponLevel] || NEON_BLUE;
-  ctx.fillStyle = wpnColor;
-  ctx.shadowColor = wpnColor;
-  ctx.shadowBlur = 4;
-  ctx.font = 'bold 11px monospace';
-  ctx.fillText('WPN Lv' + p.weaponLevel, CANVAS_WIDTH - 100, 36);
-  ctx.shadowBlur = 0;
-
-  // --- Bombs ---
-  ctx.fillStyle = NEON_ORANGE;
-  ctx.font = '11px monospace';
-  ctx.fillText('B:' + p.bombs, CANVAS_WIDTH - 100, 48);
-
-  // --- Gold ---
-  ctx.fillStyle = NEON_YELLOW;
-  ctx.fillText('G:' + p.gold, CANVAS_WIDTH - 40, 18);
-
-  // --- Special Weapon (R key) ---
-  if (p.specialWeapon) {
-    const weaponNames = {
-      laser: 'LASER',
-      rocket: 'RAKETE',
-      flamethrower: 'FEUER',
-      lightningBolt: 'BLITZ',
-    };
-    const weaponColors = {
-      laser: '#ff0066',
-      rocket: '#ff8800',
-      flamethrower: '#ff4400',
-      lightningBolt: '#ffff00',
-    };
-    const wName = weaponNames[p.specialWeapon] || '?';
-    const wColor = weaponColors[p.specialWeapon] || '#fff';
-
-    ctx.fillStyle = wColor;
-    ctx.shadowColor = wColor;
-    ctx.shadowBlur = 6;
-    ctx.font = 'bold 11px monospace';
-    ctx.textAlign = 'right';
-    ctx.fillText('R: ' + wName + ' x' + p.specialAmmo, CANVAS_WIDTH - 16, 36);
-
-    // Ammo bar
-    const ammoBarX = CANVAS_WIDTH - 80;
-    const ammoBarY = 42;
-    const ammoBarW = 64;
-    const ammoBarH = 4;
-    const maxAmmo = { laser: 5, rocket: 3, flamethrower: 8, lightningBolt: 4 }[p.specialWeapon] || 5;
-    const ammoFrac = p.specialAmmo / maxAmmo;
-
-    ctx.fillStyle = 'rgba(0,0,0,0.4)';
-    ctx.fillRect(ammoBarX, ammoBarY, ammoBarW, ammoBarH);
-    ctx.fillStyle = wColor;
-    ctx.fillRect(ammoBarX, ammoBarY, ammoBarW * ammoFrac, ammoBarH);
-    ctx.shadowBlur = 0;
-  }
-
-  // --- Active Buff Icons (bottom left) ---
-  drawActiveBuffs(ctx, p);
-
-  // --- Combo ---
-  if (state.combo > 1) {
-    ctx.textAlign = 'center';
-    const comboScale = 1 + Math.sin(state.time * 8) * 0.1;
-    ctx.save();
-    ctx.translate(CANVAS_WIDTH / 2, CANVAS_HEIGHT - 40);
-    ctx.scale(comboScale, comboScale);
-    const comboColor = state.combo >= 10 ? NEON_PURPLE : state.combo >= 5 ? NEON_ORANGE : NEON_YELLOW;
-    ctx.fillStyle = comboColor;
-    ctx.shadowColor = comboColor;
-    ctx.shadowBlur = 10;
-    ctx.font = 'bold 24px monospace';
-    ctx.fillText('x' + state.combo + ' COMBO', 0, 0);
-    ctx.shadowBlur = 0;
-    ctx.restore();
-  }
-
-  // --- Room cleared notification ---
-  if (state.roomCleared && state.doorsOpen) {
-    const room2 = window.__room_getCurrentRoom ? window.__room_getCurrentRoom() : null;
-    if (room2 && room2.type === 'combat') {
-      ctx.textAlign = 'center';
-      ctx.fillStyle = NEON_GREEN;
-      ctx.shadowColor = NEON_GREEN;
-      ctx.shadowBlur = 8;
-      ctx.font = 'bold 18px monospace';
-      ctx.fillText('RAUM GELÖST!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 60);
-      ctx.shadowBlur = 0;
-    }
-  }
-
-  // --- Minimap ---
+  drawLetterbox(ctx);
+  drawFrame(ctx);
+  drawVitals(ctx, p);
+  drawRoomPanel(ctx, room);
+  drawStats(ctx, p);
+  drawXP(ctx, p);
+  drawDoorHint(ctx, room);
+  drawSkills(ctx, p);
+  drawBuffs(ctx, p);
+  drawCombo(ctx);
+  drawRoomCleared(ctx, room);
   drawMinimap(ctx);
 
-  // --- Dash cooldown indicator ---
-  drawDashIndicator(ctx);
+  ctx.restore();
+}
 
+function drawLetterbox(ctx) {
+  const tg = ctx.createLinearGradient(0, 0, 0, 78);
+  tg.addColorStop(0, 'rgba(3,5,14,.96)');
+  tg.addColorStop(.7, 'rgba(4,7,18,.82)');
+  tg.addColorStop(1, 'rgba(4,7,18,0)');
+  ctx.fillStyle = tg;
+  ctx.fillRect(0, 0, CANVAS_WIDTH, 78);
+
+  const bg = ctx.createLinearGradient(0, CANVAS_HEIGHT - 90, 0, CANVAS_HEIGHT);
+  bg.addColorStop(0, 'rgba(4,7,18,0)');
+  bg.addColorStop(.35, 'rgba(4,7,18,.84)');
+  bg.addColorStop(1, 'rgba(3,5,14,.96)');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, CANVAS_HEIGHT - 90, CANVAS_WIDTH, 90);
+}
+
+function drawFrame(ctx) {
+  ctx.save();
+  ctx.globalAlpha = .7;
+  ctx.strokeStyle = 'rgba(0,212,255,.42)';
+  ctx.lineWidth = 1;
+  chamferPath(ctx, 10, 8, CANVAS_WIDTH - 20, CANVAS_HEIGHT - 16, 14);
+  ctx.stroke();
+  ctx.globalAlpha = .22;
+  ctx.shadowColor = NEON_BLUE;
+  ctx.shadowBlur = 14;
+  ctx.strokeStyle = NEON_BLUE;
+  chamferPath(ctx, 24, 38, CANVAS_WIDTH - 48, CANVAS_HEIGHT - 80, 10);
+  ctx.stroke();
+  ctx.restore();
+
+  diamond(ctx, CANVAS_WIDTH / 2, 11, 5, NEON_BLUE, .75);
+  diamond(ctx, CANVAS_WIDTH / 2, CANVAS_HEIGHT - 11, 5, NEON_BLUE, .45);
+  diamond(ctx, 12, CANVAS_HEIGHT / 2, 4, NEON_BLUE, .35);
+  diamond(ctx, CANVAS_WIDTH - 12, CANVAS_HEIGHT / 2, 4, NEON_BLUE, .35);
+}
+
+function drawVitals(ctx, p) {
+  panel(ctx, 18, 14, 280, 36, 10, PANEL, 'rgba(255,51,102,.28)');
+  const maxHp = Math.max(1, p.maxHp || 5);
+  for (let i = 0; i < maxHp; i++) {
+    heart(ctx, 38 + i * 30, 31, 9, i < (p.hp || 0) ? NEON_RED : 'rgba(255,255,255,.14)', i < (p.hp || 0));
+  }
+  const lives = Math.max(0, (p.lives ?? 0) + 1);
+  glowText(ctx, 'x' + lives, 214, 37, '#ff77bc', 'bold 18px monospace', 'left');
+
+  if (p.shield) {
+    const frac = clamp01((p.shieldTimer || 0) / Math.max(.001, p.shieldMaxTime || 1));
+    slimBar(ctx, 28, 46, 142, 5, frac, NEON_BLUE, 'SHIELD');
+  }
+}
+
+function drawRoomPanel(ctx, room) {
+  const w = 340;
+  const x = (CANVAS_WIDTH - w) / 2;
+  panel(ctx, x, 7, w, 47, 14, PANEL_DARK, 'rgba(0,212,255,.5)');
+  const floorName = room?.theme?.name || 'Krypta';
+  glowText(ctx, `ETAGE ${state.floor} - ${floorName}`, CANVAS_WIDTH / 2, 30, NEON_BLUE, 'bold 20px monospace', 'center');
+  ctx.fillStyle = room?.type === 'boss' ? NEON_RED : TEXT_DIM;
+  ctx.font = 'bold 11px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(roomLabel(room?.type || 'start'), CANVAS_WIDTH / 2, 45);
+  diamond(ctx, x + 16, 31, 4, NEON_BLUE, .65);
+  diamond(ctx, x + w - 16, 31, 4, NEON_BLUE, .65);
+}
+
+function drawStats(ctx, p) {
+  const x = CANVAS_WIDTH - 306;
+  panel(ctx, x, 14, 288, 54, 10, PANEL, 'rgba(0,212,255,.28)');
+  coin(ctx, x + 24, 28);
+  glowText(ctx, String(p.gold ?? 0), x + 42, 33, NEON_YELLOW, 'bold 16px monospace', 'left');
+  diamond(ctx, x + 116, 27, 6, NEON_PURPLE, .9);
+  glowText(ctx, String(state.score ?? 0), x + 132, 33, NEON_PURPLE, 'bold 16px monospace', 'left');
+  glowText(ctx, `WPN LV${p.weaponLevel || 1}`, x + 24, 57, NEON_BLUE, 'bold 14px monospace', 'left');
+  glowText(ctx, `B:${p.bombs ?? 0}`, x + 186, 57, NEON_ORANGE, 'bold 16px monospace', 'left');
+}
+
+function drawXP(ctx, p) {
+  const x = 24;
+  const y = CANVAS_HEIGHT - 42;
+  diamondBadge(ctx, x + 14, y + 9, String(state.floor || 1));
+  const xp = state.xp ?? p.xp ?? 45;
+  const xpMax = state.xpToNext ?? p.xpToNext ?? 100;
+  const frac = clamp01(xp / Math.max(1, xpMax));
+  ctx.fillStyle = NEON_BLUE;
+  ctx.font = 'bold 12px monospace';
   ctx.textAlign = 'left';
+  ctx.fillText('XP', x + 44, y + 14);
+  slimBar(ctx, x + 72, y + 5, 180, 8, frac, NEON_BLUE, '');
+  ctx.fillStyle = TEXT_SOFT;
+  ctx.font = 'bold 11px monospace';
+  ctx.fillText(`${Math.round(xp)} / ${Math.round(xpMax)}`, x + 264, y + 14);
 }
 
-// ============================================================
-// Dash Indicator
-// ============================================================
-
-function drawDashIndicator(ctx) {
-  const p = state.player;
-  const x = 16;
-  const y = CANVAS_HEIGHT - 28;
-
-  ctx.fillStyle = 'rgba(0,0,0,0.4)';
-  ctx.fillRect(x, y, 60, 8);
-
-  const cd = p.dashCooldown;
-  const maxCd = 0.8;
-  const ready = cd <= 0;
-
-  ctx.fillStyle = ready ? NEON_BLUE : 'rgba(0, 212, 255, 0.3)';
-  ctx.fillRect(x, y, 60 * (ready ? 1 : 1 - cd / maxCd), 8);
-
-  ctx.fillStyle = '#fff';
-  ctx.font = '7px monospace';
-  ctx.fillText('DASH', x + 2, y + 7);
+function drawDoorHint(ctx, room) {
+  if (!room || !state.doorsOpen) return;
+  const dirs = Object.entries(room.doors || {}).filter(([, open]) => open).map(([dir]) => dir);
+  if (!dirs.length) return;
+  const x = CANVAS_WIDTH / 2 - 44;
+  const y = CANVAS_HEIGHT - 61;
+  panel(ctx, x, y, 88, 42, 9, 'rgba(2,20,20,.72)', 'rgba(0,255,136,.54)');
+  glowText(ctx, doorGlyph(dirs), CANVAS_WIDTH / 2, y + 28, NEON_GREEN, 'bold 20px monospace', 'center');
 }
 
-// ============================================================
-// Minimap
-// ============================================================
+function drawSkills(ctx, p) {
+  const y = CANVAS_HEIGHT - 86;
+  const size = 64;
+  const gap = 10;
+  const startX = CANVAS_WIDTH - (size * 3 + gap * 2) - 28;
+  skill(ctx, startX, y, size, 'DASH', 'SHIFT', NEON_BLUE, 'dash', dashFrac(p));
+  skill(ctx, startX + size + gap, y, size, 'BOMB', 'Q', NEON_PURPLE, 'bomb', (p.bombs || 0) > 0 ? 1 : 0);
+  const ready = p.specialWeapon && (p.specialAmmo || 0) > 0;
+  skill(ctx, startX + (size + gap) * 2, y, size, specialLabel(p.specialWeapon), 'R', '#ff4faa', 'special', ready ? 1 : .22);
+}
+
+function drawBuffs(ctx, p) {
+  const buffs = [];
+  if (p.shield) buffs.push({ label: 'SHD', color: NEON_BLUE, frac: clamp01((p.shieldTimer || 0) / Math.max(.001, p.shieldMaxTime || 1)) });
+  if (p.berserkTimer > 0) buffs.push({ label: 'BRK', color: NEON_RED, frac: clamp01(p.berserkTimer / 10) });
+  if (p.speedBoostTimer > 0) buffs.push({ label: 'SPD', color: NEON_GREEN, frac: clamp01(p.speedBoostTimer / 8) });
+  if (p.magnetTimer > 0) buffs.push({ label: 'MAG', color: NEON_PURPLE, frac: clamp01(p.magnetTimer / 8) });
+  if (state.slowMotion && state.slowMotion < 1) buffs.push({ label: 'SLO', color: NEON_YELLOW, frac: 1 });
+  if (!buffs.length) return;
+  let x = 24;
+  const y = CANVAS_HEIGHT - 82;
+  for (const b of buffs.slice(0, 5)) {
+    panel(ctx, x, y, 44, 22, 6, 'rgba(4,7,18,.72)', b.color + '88');
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 10px monospace';
+    ctx.fillStyle = b.color;
+    ctx.fillText(b.label, x + 22, y + 15);
+    slimBar(ctx, x + 6, y + 18, 32, 3, b.frac, b.color, '');
+    x += 54;
+  }
+}
+
+function drawCombo(ctx) {
+  if (!state.combo || state.combo <= 1) return;
+  const color = state.combo >= 10 ? NEON_PURPLE : state.combo >= 5 ? NEON_ORANGE : NEON_YELLOW;
+  ctx.save();
+  ctx.translate(CANVAS_WIDTH / 2, CANVAS_HEIGHT - 118);
+  const s = 1 + Math.sin(state.time * 8) * .08;
+  ctx.scale(s, s);
+  glowText(ctx, `x${state.combo} COMBO`, 0, 0, color, 'bold 24px monospace', 'center');
+  ctx.restore();
+}
+
+function drawRoomCleared(ctx, room) {
+  if (!state.roomCleared || !state.doorsOpen || room?.type !== 'combat') return;
+  ctx.save();
+  ctx.globalAlpha = .5 + Math.sin(state.time * 5) * .18;
+  glowText(ctx, 'RAUM GELOEST', CANVAS_WIDTH / 2, 104, NEON_GREEN, 'bold 18px monospace', 'center');
+  ctx.restore();
+}
 
 function drawMinimap(ctx) {
-  const mmSize = 5;
-  const mmPad = 2;
-  const mmOffX = CANVAS_WIDTH - 16 - DUNGEON_GRID * (mmSize + mmPad);
-  const mmOffY = CANVAS_HEIGHT - 16 - DUNGEON_GRID * (mmSize + mmPad);
-
-  ctx.fillStyle = 'rgba(10, 10, 20, 0.7)';
-  ctx.fillRect(mmOffX - 4, mmOffY - 4,
-    DUNGEON_GRID * (mmSize + mmPad) + 4,
-    DUNGEON_GRID * (mmSize + mmPad) + 4);
-
   if (!state.dungeon) return;
-
+  const s = 5;
+  const pad = 2;
+  const w = DUNGEON_GRID * (s + pad) + 14;
+  const h = DUNGEON_GRID * (s + pad) + 14;
+  const ox = CANVAS_WIDTH - w - 34;
+  const oy = CANVAS_HEIGHT - h - 18;
+  panel(ctx, ox - 8, oy - 8, w + 16, h + 16, 8, 'rgba(3,5,12,.64)', 'rgba(0,212,255,.16)');
   for (let gy = 0; gy < DUNGEON_GRID; gy++) {
     for (let gx = 0; gx < DUNGEON_GRID; gx++) {
       const room = state.dungeon.grid[gy][gx];
-      if (!room) continue;
-
-      const key = gx + ',' + gy;
-      const visited = state.visitedRooms.has(key);
-      const isCurrent = state.currentRoom.x === gx && state.currentRoom.y === gy;
-
-      const rx = mmOffX + gx * (mmSize + mmPad);
-      const ry = mmOffY + gy * (mmSize + mmPad);
-
-      if (!visited && !isCurrent) {
-        ctx.fillStyle = 'rgba(255,255,255,0.05)';
-        ctx.fillRect(rx, ry, mmSize, mmSize);
+      const rx = ox + 7 + gx * (s + pad);
+      const ry = oy + 7 + gy * (s + pad);
+      if (!room) {
+        ctx.fillStyle = 'rgba(255,255,255,.025)';
+        ctx.fillRect(rx, ry, s, s);
         continue;
       }
-
-      let color = '#333';
-      switch (room.type) {
-        case 'start':    color = NEON_BLUE; break;
-        case 'combat':   color = '#666'; break;
-        case 'treasure': color = NEON_YELLOW; break;
-        case 'boss':     color = NEON_RED; break;
-        case 'shop':     color = NEON_GREEN; break;
-        case 'rest':     color = NEON_PURPLE; break;
+      const key = gx + ',' + gy;
+      const visited = state.visitedRooms.has(key);
+      const current = state.currentRoom.x === gx && state.currentRoom.y === gy;
+      if (!visited && !current) {
+        ctx.fillStyle = 'rgba(255,255,255,.055)';
+        ctx.fillRect(rx, ry, s, s);
+        continue;
       }
-
+      const color = roomColor(room.type);
       ctx.fillStyle = color;
-      ctx.fillRect(rx, ry, mmSize, mmSize);
-
-      if (isCurrent) {
+      ctx.shadowColor = color;
+      ctx.shadowBlur = current ? 8 : 3;
+      ctx.fillRect(rx, ry, s, s);
+      ctx.shadowBlur = 0;
+      if (current) {
         ctx.strokeStyle = '#fff';
         ctx.lineWidth = 1;
-        ctx.strokeRect(rx - 1, ry - 1, mmSize + 2, mmSize + 2);
+        ctx.strokeRect(rx - 2, ry - 2, s + 4, s + 4);
       }
-
-      // Connections
-      ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(200,240,255,.17)';
       if (room.doors.right && gx + 1 < DUNGEON_GRID) {
         ctx.beginPath();
-        ctx.moveTo(rx + mmSize, ry + mmSize / 2);
-        ctx.lineTo(rx + mmSize + mmPad, ry + mmSize / 2);
+        ctx.moveTo(rx + s, ry + s / 2);
+        ctx.lineTo(rx + s + pad, ry + s / 2);
         ctx.stroke();
       }
       if (room.doors.down && gy + 1 < DUNGEON_GRID) {
         ctx.beginPath();
-        ctx.moveTo(rx + mmSize / 2, ry + mmSize);
-        ctx.lineTo(rx + mmSize / 2, ry + mmSize + mmPad);
+        ctx.moveTo(rx + s / 2, ry + s);
+        ctx.lineTo(rx + s / 2, ry + s + pad);
         ctx.stroke();
       }
     }
   }
 }
 
-// ============================================================
-// Heart helper
-// ============================================================
+function panel(ctx, x, y, w, h, cut, fill, stroke) {
+  ctx.save();
+  chamferPath(ctx, x, y, w, h, cut);
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth = 1.2;
+  ctx.shadowColor = stroke;
+  ctx.shadowBlur = 8;
+  ctx.stroke();
+  ctx.globalAlpha = .18;
+  ctx.strokeStyle = '#fff';
+  chamferPath(ctx, x + 3, y + 3, w - 6, h - 6, Math.max(2, cut - 3));
+  ctx.stroke();
+  ctx.restore();
+}
 
-function drawHeart(ctx, x, y, size, color) {
+function chamferPath(ctx, x, y, w, h, cut) {
+  ctx.beginPath();
+  ctx.moveTo(x + cut, y);
+  ctx.lineTo(x + w - cut, y);
+  ctx.lineTo(x + w, y + cut);
+  ctx.lineTo(x + w, y + h - cut);
+  ctx.lineTo(x + w - cut, y + h);
+  ctx.lineTo(x + cut, y + h);
+  ctx.lineTo(x, y + h - cut);
+  ctx.lineTo(x, y + cut);
+  ctx.closePath();
+}
+
+function heart(ctx, x, y, size, color, glow = true) {
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.strokeStyle = glow ? '#ffb0cf' : 'rgba(255,255,255,.12)';
+  ctx.lineWidth = 1.2;
+  if (glow) { ctx.shadowColor = color; ctx.shadowBlur = 10; }
+  ctx.beginPath();
+  ctx.moveTo(x, y + size * .35);
+  ctx.bezierCurveTo(x, y - size * .45, x - size * 1.1, y - size * .35, x - size * 1.1, y + size * .15);
+  ctx.bezierCurveTo(x - size * 1.1, y + size * .8, x, y + size * 1.25, x, y + size * 1.25);
+  ctx.bezierCurveTo(x, y + size * 1.25, x + size * 1.1, y + size * .8, x + size * 1.1, y + size * .15);
+  ctx.bezierCurveTo(x + size * 1.1, y - size * .35, x, y - size * .45, x, y + size * .35);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+
+function slimBar(ctx, x, y, w, h, frac, color, label) {
+  ctx.save();
+  roundedPath(ctx, x, y, w, h, h / 2);
+  ctx.fillStyle = 'rgba(255,255,255,.08)';
+  ctx.fill();
+  roundedPath(ctx, x, y, w * clamp01(frac), h, h / 2);
   ctx.fillStyle = color;
   ctx.shadowColor = color;
-  ctx.shadowBlur = 4;
-  ctx.beginPath();
-  ctx.moveTo(x, y + size * 0.3);
-  ctx.bezierCurveTo(x, y - size * 0.3, x - size, y - size * 0.3, x - size, y + size * 0.1);
-  ctx.bezierCurveTo(x - size, y + size * 0.6, x, y + size, x, y + size);
-  ctx.bezierCurveTo(x, y + size, x + size, y + size * 0.6, x + size, y + size * 0.1);
-  ctx.bezierCurveTo(x + size, y - size * 0.3, x, y - size * 0.3, x, y + size * 0.3);
+  ctx.shadowBlur = 8;
   ctx.fill();
   ctx.shadowBlur = 0;
-}
-
-// ============================================================
-// Active Buff Display
-// ============================================================
-
-function drawActiveBuffs(ctx, p) {
-  const buffs = [];
-  const now = state.time;
-
-  if (p.shield)       buffs.push({ label: 'SHIELD', color: NEON_BLUE, timer: p.shieldTimer, max: p.shieldMaxTime });
-  if (p.speedBoost)   buffs.push({ label: 'SPEED', color: NEON_YELLOW, timer: p.speedBoostTimer, max: 10 });
-  if (p.berserk)      buffs.push({ label: 'BERSERK', color: '#ff4444', timer: p.berserkTimer, max: p.berserkMaxTime });
-  if (p.timeSlow)     buffs.push({ label: 'SLOW-MO', color: '#aaaaff', timer: p.timeSlowTimer, max: p.timeSlowMaxTime });
-  if (p.chainLightning) buffs.push({ label: 'CHAIN', color: '#44ffff', timer: p.chainLightningTimer, max: p.chainLightningMaxTime });
-  if (p.magnetRange > 0) buffs.push({ label: 'MAGNET', color: '#88ffcc', timer: 15, max: 15 });
-  if (p.orbitals > 0) buffs.push({ label: 'ORB x' + p.orbitals, color: '#00ccff', timer: -1, max: -1 });  // permanent
-  if (p.bulletPiercing) buffs.push({ label: 'PIERCE', color: NEON_PURPLE, timer: -1, max: -1 });  // permanent
-
-  const startX = 16;
-  const startY = CANVAS_HEIGHT - 60;
-  const bw = 65;
-  const bh = 16;
-
-  for (let i = 0; i < buffs.length; i++) {
-    const b = buffs[i];
-    const bx = startX + i * (bw + 4);
-    const by = startY;
-
-    // Background
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(bx, by, bw, bh);
-
-    // Timer bar
-    if (b.timer > 0 && b.max > 0) {
-      const frac = b.timer / b.max;
-      ctx.fillStyle = b.color;
-      ctx.globalAlpha = 0.3;
-      ctx.fillRect(bx, by, bw * frac, bh);
-      ctx.globalAlpha = 1;
-    }
-
-    // Label
-    ctx.fillStyle = b.color;
-    ctx.shadowColor = b.color;
-    ctx.shadowBlur = 4;
-    ctx.font = 'bold 9px monospace';
+  if (label) {
+    ctx.fillStyle = color;
+    ctx.font = 'bold 8px monospace';
     ctx.textAlign = 'left';
-    ctx.fillText(b.label, bx + 3, by + 12);
-    ctx.shadowBlur = 0;
-
-    // Permanent indicator (pulsing)
-    if (b.timer < 0) {
-      ctx.globalAlpha = 0.5 + Math.sin(now * 4) * 0.3;
-      ctx.fillStyle = b.color;
-      ctx.fillRect(bx + bw - 6, by + 2, 4, bh - 4);
-      ctx.globalAlpha = 1;
-    }
+    ctx.fillText(label, x + w + 8, y + h + 1);
   }
+  ctx.restore();
 }
+
+function roundedPath(ctx, x, y, w, h, r) {
+  const rr = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + rr, y);
+  ctx.lineTo(x + w - rr, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + rr);
+  ctx.lineTo(x + w, y + h - rr);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
+  ctx.lineTo(x + rr, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - rr);
+  ctx.lineTo(x, y + rr);
+  ctx.quadraticCurveTo(x, y, x + rr, y);
+  ctx.closePath();
+}
+
+function skill(ctx, x, y, size, label, key, color, icon, readyFrac) {
+  const active = readyFrac >= .98;
+  panel(ctx, x, y, size, 76, 9, active ? 'rgba(3,12,20,.82)' : 'rgba(4,5,12,.68)', color + (active ? 'aa' : '55'));
+  ctx.save();
+  ctx.globalAlpha = active ? 1 : .42;
+  ctx.translate(x + size / 2, y + 24);
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 11;
+  ctx.lineWidth = 2.4;
+  skillIcon(ctx, icon);
+  ctx.restore();
+  if (!active) {
+    ctx.fillStyle = 'rgba(0,0,0,.45)';
+    ctx.fillRect(x + 4, y + 4, size - 8, (76 - 8) * (1 - clamp01(readyFrac)));
+  }
+  ctx.textAlign = 'center';
+  ctx.fillStyle = active ? color : 'rgba(220,235,255,.45)';
+  ctx.font = 'bold 10px monospace';
+  ctx.fillText(label.slice(0, 7), x + size / 2, y + 55);
+  ctx.fillStyle = active ? TEXT_SOFT : 'rgba(220,235,255,.38)';
+  ctx.font = 'bold 9px monospace';
+  ctx.fillText(key, x + size / 2, y + 69);
+}
+
+function skillIcon(ctx, icon) {
+  if (icon === 'dash') {
+    ctx.beginPath(); ctx.moveTo(-15, -5); ctx.lineTo(9, -5); ctx.moveTo(-10, 0); ctx.lineTo(16, 0); ctx.moveTo(-15, 5); ctx.lineTo(7, 5); ctx.stroke(); return;
+  }
+  if (icon === 'bomb') {
+    ctx.beginPath(); ctx.arc(0, 3, 10, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(5, -7); ctx.quadraticCurveTo(11, -15, 16, -8); ctx.stroke();
+    ctx.beginPath(); ctx.arc(17, -9, 2, 0, Math.PI * 2); ctx.fill(); return;
+  }
+  ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI * 2); ctx.moveTo(-18, 0); ctx.lineTo(18, 0); ctx.moveTo(0, -18); ctx.lineTo(0, 18); ctx.stroke();
+  ctx.beginPath(); ctx.arc(0, 0, 3, 0, Math.PI * 2); ctx.fill();
+}
+
+function diamond(ctx, x, y, r, color, alpha = 1) {
+  ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = color; ctx.shadowColor = color; ctx.shadowBlur = 8;
+  ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x + r, y); ctx.lineTo(x, y + r); ctx.lineTo(x - r, y); ctx.closePath(); ctx.fill(); ctx.restore();
+}
+
+function diamondBadge(ctx, x, y, text) {
+  ctx.save(); ctx.strokeStyle = NEON_BLUE; ctx.fillStyle = 'rgba(0,30,45,.72)'; ctx.shadowColor = NEON_BLUE; ctx.shadowBlur = 7;
+  ctx.beginPath(); ctx.moveTo(x, y - 16); ctx.lineTo(x + 16, y); ctx.lineTo(x, y + 16); ctx.lineTo(x - 16, y); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.shadowBlur = 0;
+  ctx.fillStyle = TEXT_SOFT; ctx.textAlign = 'center'; ctx.font = 'bold 12px monospace'; ctx.fillText(text, x, y + 4); ctx.restore();
+}
+
+function coin(ctx, x, y) {
+  ctx.save(); ctx.strokeStyle = NEON_YELLOW; ctx.fillStyle = 'rgba(255,228,77,.18)'; ctx.shadowColor = NEON_YELLOW; ctx.shadowBlur = 8;
+  ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center'; ctx.fillStyle = NEON_YELLOW; ctx.fillText('G', x, y + 4); ctx.restore();
+}
+
+function glowText(ctx, text, x, y, color, font, align = 'left') {
+  ctx.save(); ctx.fillStyle = color; ctx.shadowColor = color; ctx.shadowBlur = 8; ctx.font = font; ctx.textAlign = align; ctx.fillText(text, x, y); ctx.restore();
+}
+
+function dashFrac(p) { const cd = p.dashCooldown || 0; return cd <= 0 ? 1 : clamp01(1 - cd / .8); }
+function clamp01(v) { return Math.max(0, Math.min(1, Number.isFinite(v) ? v : 0)); }
+function roomLabel(type) { return ({ start: 'START', combat: state.doorsOpen ? 'CLEARED' : 'KAMPF', treasure: 'SCHATZ', shop: 'SHOP', rest: 'RUHE', boss: 'BOSS' })[type] || String(type || '').toUpperCase(); }
+function roomColor(type) { return ({ start: NEON_BLUE, combat: '#7f8ea3', treasure: NEON_YELLOW, boss: NEON_RED, shop: NEON_GREEN, rest: NEON_PURPLE })[type] || '#3b4a5d'; }
+function doorGlyph(dirs) { if (dirs.includes('down')) return 'v'; if (dirs.includes('right')) return '>'; if (dirs.includes('left')) return '<'; if (dirs.includes('up')) return '^'; return '*'; }
+function specialLabel(type) { return ({ laser: 'LASER', rocket: 'RAKETE', flamethrower: 'FEUER', lightningBolt: 'BLITZ' })[type] || 'SPECIAL'; }
