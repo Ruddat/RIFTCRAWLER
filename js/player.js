@@ -532,6 +532,9 @@ function enterRoom(dir) {
   state.bullets = [];
   state.enemyBullets = [];
   state.particles = [];
+  state.ambientParticles = [];
+  state.ambientSpawnTimer = 0;
+  state.bloodStains = [];
 
   // Spawn room content via main.js bridge (avoids circular imports)
   if (!neighbor.spawned && neighbor.type === 'combat') {

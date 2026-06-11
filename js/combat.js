@@ -146,6 +146,16 @@ export function updateCombat() {
       state.combo = 0;
     }
   }
+
+  // --- Blood stains on enemy death ---
+  for (const e of state.enemies) {
+    if (e.hp <= 0 && !e._bloodStained) {
+      e._bloodStained = true;
+      if (window.__room_addBloodStain) {
+        window.__room_addBloodStain(e.x, e.y);
+      }
+    }
+  }
 }
 
 /** Apply knockback to an enemy */

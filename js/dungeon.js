@@ -123,6 +123,13 @@ export function generateDungeon(floor) {
       room.cleared = false;
     } else if (room.type === ROOM_BOSS) {
       room.cleared = false;
+      // Boss rooms get extra torches for atmosphere
+      room.torches.push(
+        { side: 0, x: ROOM_WIDTH / 2 - 80, y: 16, flickerPhase: 0, brightness: 0.9 },
+        { side: 0, x: ROOM_WIDTH / 2 + 80, y: 16, flickerPhase: 1.5, brightness: 0.9 },
+        { side: 1, x: ROOM_WIDTH / 2 - 80, y: ROOM_HEIGHT - 16, flickerPhase: 3.0, brightness: 0.9 },
+        { side: 1, x: ROOM_WIDTH / 2 + 80, y: ROOM_HEIGHT - 16, flickerPhase: 4.5, brightness: 0.9 },
+      );
     } else {
       room.cleared = true;  // non-combat rooms start cleared
     }
@@ -160,6 +167,10 @@ function createRoom(gx, gy, type, floor) {
     theme,
     // Pre-generate some decorative elements
     decorations: generateDecorations(),
+    // Atmosphere data
+    torches: generateTorches(gx, gy),
+    floorDetails: generateFloorDetails(gx, gy),
+    ambientColor: generateAmbientColor(theme, type),
   };
 }
 
@@ -179,6 +190,116 @@ function generateDecorations() {
     });
   }
   return decos;
+}
+
+/**
+ * Generate torch/crystal positions on walls.
+ * Each torch has a wall side and position along that wall.
+ */
+function generateTorches(gx, gy) {
+  const torches = [];
+  // Seed-based randomness for consistent torches per room
+  const seed = gx * 73 + gy * 137;
+  const count = 2 + (seed % 3);  // 2-4 torches per room
+
+  const wallPad = 64;  // padding from corners
+  for (let i = 0; i < count; i++) {
+    const s = seed + i * 47;
+    const side = s % 4;  // 0=top, 1=bottom, 2=left, 3=right
+    const t = {
+      side,
+      flickerPhase: (s * 0.1) % (Math.PI * 2),
+      brightness: randRange(0.6, 1.0),
+    };
+
+    // Position along wall
+    switch (side) {
+      case 0: // top wall
+        t.x = wallPad + ((s * 31) % (ROOM_WIDTH - wallPad * 2));
+        t.y = 16;
+        break;
+      case 1: // bottom wall
+        t.x = wallPad + ((s * 29) % (ROOM_WIDTH - wallPad * 2));
+        t.y = ROOM_HEIGHT - 16;
+        break;
+      case 2: // left wall
+        t.x = 16;
+        t.y = wallPad + ((s * 23) % (ROOM_HEIGHT - wallPad * 2));
+        break;
+      case 3: // right wall
+        t.x = ROOM_WIDTH - 16;
+        t.y = wallPad + ((s * 19) % (ROOM_HEIGHT - wallPad * 2));
+        break;
+    }
+    torches.push(t);
+  }
+  return torches;
+}
+
+/**
+ * Generate floor detail elements: cracks, puddles, rune circles, blood stains.
+ */
+function generateFloorDetails(gx, gy) {
+  const details = [];
+  const seed = gx * 53 + gy * 97;
+  const wallPad = 48;
+
+  // Cracks (1-3 per room)
+  const crackCount = 1 + (seed % 3);
+  for (let i = 0; i < crackCount; i++) {
+    const s = seed + i * 71;
+    details.push({
+      type: 'crack',
+      x: wallPad + ((s * 41) % (ROOM_WIDTH - wallPad * 2)),
+      y: wallPad + ((s * 37) % (ROOM_HEIGHT - wallPad * 2)),
+      rotation: (s * 0.5) % (Math.PI * 2),
+      length: randRange(20, 60),
+      alpha: randRange(0.06, 0.15),
+    });
+  }
+
+  // Puddles (0-2 per room)
+  const puddleCount = (seed * 3) % 3;
+  for (let i = 0; i < puddleCount; i++) {
+    const s = seed + i * 83 + 100;
+    details.push({
+      type: 'puddle',
+      x: wallPad + ((s * 43) % (ROOM_WIDTH - wallPad * 2)),
+      y: wallPad + ((s * 39) % (ROOM_HEIGHT - wallPad * 2)),
+      size: randRange(15, 35),
+      alpha: randRange(0.04, 0.10),
+    });
+  }
+
+  // Rune circle (0-1 per room, rare)
+  if ((seed * 7) % 5 === 0) {
+    details.push({
+      type: 'rune',
+      x: ROOM_WIDTH / 2 + randRange(-100, 100),
+      y: ROOM_HEIGHT / 2 + randRange(-60, 60),
+      radius: randRange(25, 45),
+      rotation: randRange(0, Math.PI * 2),
+      alpha: randRange(0.05, 0.12),
+    });
+  }
+
+  // Blood stains (only in combat/boss rooms)
+  // Will be added dynamically when enemies die
+
+  return details;
+}
+
+/**
+ * Generate ambient particle color based on theme and room type.
+ */
+function generateAmbientColor(theme, roomType) {
+  // Boss rooms get a reddish tint, treasure gets golden, rest gets blue
+  switch (roomType) {
+    case ROOM_BOSS: return { r: 255, g: 50, b: 50, intensity: 0.4 };
+    case ROOM_TREASURE: return { r: 255, g: 220, b: 80, intensity: 0.2 };
+    case ROOM_REST: return { r: 100, g: 150, b: 255, intensity: 0.15 };
+    default: return null;  // use theme accent color
+  }
 }
 
 /**

@@ -147,6 +147,11 @@ export const state = {
   floorTransition: false,
   floorTransitionTimer: 0,
 
+  // --- Ambient atmosphere ---
+  ambientParticles: [],       // floating dust/embers/fog particles
+  ambientSpawnTimer: 0,       // timer for spawning new ambient particles
+  bloodStains: [],            // dynamically added blood stains from kills
+
   // --- Input ---
   lastInputMode: 'keyboard',
 };
@@ -170,6 +175,11 @@ export function resetState() {
   state.visitedRooms = new Set();
   state.floorTransition = false;
   state.floorTransitionTimer = 0;
+
+  // Ambient
+  state.ambientParticles = [];
+  state.ambientSpawnTimer = 0;
+  state.bloodStains = [];
 
   // Reset player
   const p = state.player;

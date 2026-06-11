@@ -10,7 +10,7 @@ import {
 import { state, resetState } from './state.js';
 import { initInput, getMovement, consumePause, consumeFullscreen, consumeStart, isKeyDown } from './input.js';
 import { generateDungeon, getRoomAt, advanceFloor } from './dungeon.js';
-import { drawRoom, getCurrentRoom, getDoorEntryPoint, oppositeDir } from './room.js';
+import { drawRoom, getCurrentRoom, getDoorEntryPoint, oppositeDir, drawVignette, addBloodStain } from './room.js';
 import { updateCamera, shakeCamera } from './camera.js';
 import { updatePlayer, drawPlayer, drawBullets, damagePlayer, healPlayer } from './player.js';
 import { spawnEnemy, updateEnemies, drawEnemies } from './enemies.js';
@@ -28,6 +28,7 @@ window.__powerups = { spawnPowerup, applyPowerupEffect };
 window.__camera = { shakeCamera };
 window.__state = state;
 window.__room_getCurrentRoom = getCurrentRoom;
+window.__room_addBloodStain = addBloodStain;
 window.__enemies_spawnEnemy = spawnEnemy;
 window.__powerups_spawnPowerup = spawnPowerup;
 window.__powerups_applyEffect = applyPowerupEffect;
@@ -275,6 +276,9 @@ function enterNextFloor() {
   state.enemyBullets = [];
   state.particles = [];
   state.powerups = [];
+  state.ambientParticles = [];
+  state.ambientSpawnTimer = 0;
+  state.bloodStains = [];
 
   // Heal a bit on floor change
   state.player.hp = Math.min(state.player.hp + 1, state.player.maxHp);
@@ -306,7 +310,7 @@ function renderGame() {
   ctx.save();
   ctx.translate(ROOM_OFFSET_X + state.camera.shakeX, ROOM_OFFSET_Y + state.camera.shakeY);
 
-  // Room (floor, walls, doors) – drawn in room-local coords
+  // Room (floor, walls, doors, atmosphere) – drawn in room-local coords
   drawRoom(ctx);
 
   // Game entities – also in room-local coords
@@ -315,6 +319,9 @@ function renderGame() {
   drawEnemies(ctx);
   drawPlayer(ctx);
   drawEffects(ctx);
+
+  // Vignette overlay (room-local coords)
+  drawVignette(ctx);
 
   ctx.restore();
 
