@@ -1,14 +1,18 @@
 // ============================================================
-// RIFT CRAWLER – Audio System (Web Audio API)
+// RIFT CRAWLER – Audio System
 // ============================================================
-// Procedural sound effects using oscillators (no audio files needed).
-// Background music generated with simple patterns.
+// Procedural SFX via Web Audio API. Music can use an external level track
+// with procedural ambient fallback when the file is missing.
 
 let audioCtx = null;
 let musicGain = null;
 let sfxGain = null;
 let musicPlaying = false;
 let musicOscillators = [];
+let levelMusic = null;
+
+const LEVEL1_MUSIC_URL = 'assets/audio/level1.mp3';
+const LEVEL_MUSIC_VOLUME = 0.38;
 
 function getCtx() {
   if (!audioCtx) {
@@ -25,6 +29,15 @@ function getCtx() {
 
 export function initAudio() {
   getCtx();
+  initLevelMusic();
+}
+
+function initLevelMusic() {
+  if (levelMusic) return;
+  levelMusic = new Audio(LEVEL1_MUSIC_URL);
+  levelMusic.loop = true;
+  levelMusic.preload = 'auto';
+  levelMusic.volume = LEVEL_MUSIC_VOLUME;
 }
 
 // ============================================================
@@ -141,7 +154,7 @@ function playNoise(ctx, duration, vol) {
 }
 
 // ============================================================
-// Background Music (simple procedural ambient loop)
+// Background Music
 // ============================================================
 
 export function startMusic() {
@@ -149,8 +162,27 @@ export function startMusic() {
   const ctx = getCtx();
   if (ctx.state === 'suspended') ctx.resume();
 
-  // Simple ambient drone
-  const baseFreq = 55; // A1
+  initLevelMusic();
+
+  const playPromise = levelMusic?.play();
+  if (playPromise) {
+    playPromise
+      .then(() => {
+        musicPlaying = true;
+      })
+      .catch(() => {
+        startProceduralMusic(ctx);
+      });
+    return;
+  }
+
+  startProceduralMusic(ctx);
+}
+
+function startProceduralMusic(ctx) {
+  if (musicPlaying) return;
+
+  const baseFreq = 55;
 
   for (let i = 0; i < 3; i++) {
     const osc = ctx.createOscillator();
@@ -159,7 +191,6 @@ export function startMusic() {
     osc.frequency.value = baseFreq * (i + 1);
     gain.gain.value = 0.05 / (i + 1);
 
-    // Slow LFO modulation
     const lfo = ctx.createOscillator();
     const lfoGain = ctx.createGain();
     lfo.frequency.value = 0.1 + i * 0.05;
@@ -179,6 +210,11 @@ export function startMusic() {
 }
 
 export function stopMusic() {
+  if (levelMusic) {
+    levelMusic.pause();
+    levelMusic.currentTime = 0;
+  }
+
   for (const m of musicOscillators) {
     try {
       m.osc.stop();
