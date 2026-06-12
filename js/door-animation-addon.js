@@ -25,13 +25,6 @@ const DOOR_PX = DOOR_WIDTH * TILE_SIZE;
 function loop() {
   requestAnimationFrame(loop);
 
-  // Draw after the main RAF renderers. The old room renderer can repaint the
-  // original green door marker; this timeout makes the door overlay the final
-  // visual pass for the frame.
-  setTimeout(drawFinalDoorOverlay, 0);
-}
-
-function drawFinalDoorOverlay() {
   const state = window.__state;
   if (!ctx || !state || state.screen !== 'playing' || state.paused || state.floorTransition) return;
 
