@@ -25,6 +25,13 @@ const DOOR_PX = DOOR_WIDTH * TILE_SIZE;
 function loop() {
   requestAnimationFrame(loop);
 
+  // Draw after the main RAF renderers. The old room renderer can repaint the
+  // original green door marker; this timeout makes the door overlay the final
+  // visual pass for the frame.
+  setTimeout(drawFinalDoorOverlay, 0);
+}
+
+function drawFinalDoorOverlay() {
   const state = window.__state;
   if (!ctx || !state || state.screen !== 'playing' || state.paused || state.floorTransition) return;
 
@@ -61,17 +68,23 @@ function drawAnimatedOpenDoors(ctx, room, time) {
 }
 
 function coverOriginalTopDoor(ctx, x) {
-  // Hide the old top-door mark that sits too close to the HUD.
+  // Hide the old top-door marker and its glow. This intentionally masks wider
+  // than the original 64px door because shadowBlur bleeds outside the stroke.
   ctx.save();
-  ctx.fillStyle = 'rgba(4, 6, 14, 0.99)';
-  ctx.fillRect(x - 22, 0, DOOR_PX + 44, WALL + 24);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = 1;
 
-  // Rebuild a very dark wall cap so no old green/cyan door line remains visible.
-  const grad = ctx.createLinearGradient(0, 0, 0, WALL + 24);
+  ctx.fillStyle = 'rgba(2, 3, 10, 1)';
+  ctx.fillRect(x - 72, 0, DOOR_PX + 144, WALL + 34);
+
+  const grad = ctx.createLinearGradient(0, 0, 0, WALL + 34);
   grad.addColorStop(0, 'rgba(2, 3, 10, 1)');
-  grad.addColorStop(1, 'rgba(6, 9, 18, 0.96)');
+  grad.addColorStop(0.55, 'rgba(4, 6, 14, 1)');
+  grad.addColorStop(1, 'rgba(7, 10, 18, 0.98)');
   ctx.fillStyle = grad;
-  ctx.fillRect(x - 22, 0, DOOR_PX + 44, WALL + 24);
+  ctx.fillRect(x - 72, 0, DOOR_PX + 144, WALL + 34);
+
   ctx.restore();
 }
 
