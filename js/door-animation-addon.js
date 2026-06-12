@@ -18,7 +18,7 @@ import {
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas?.getContext('2d');
 
-const TOP_DOOR_VISUAL_DROP = 42;
+const TOP_DOOR_VISUAL_DROP = 26;
 const WALL = TILE_SIZE;
 const DOOR_PX = DOOR_WIDTH * TILE_SIZE;
 
@@ -63,14 +63,15 @@ function drawAnimatedOpenDoors(ctx, room, time) {
 function coverOriginalTopDoor(ctx, x) {
   // Hide the old top-door mark that sits too close to the HUD.
   ctx.save();
-  ctx.fillStyle = 'rgba(4, 6, 14, 0.92)';
-  ctx.fillRect(x - 8, 0, DOOR_PX + 16, WALL + 10);
-  ctx.strokeStyle = 'rgba(0, 212, 255, 0.18)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(x - 8, WALL + 9);
-  ctx.lineTo(x + DOOR_PX + 8, WALL + 9);
-  ctx.stroke();
+  ctx.fillStyle = 'rgba(4, 6, 14, 0.99)';
+  ctx.fillRect(x - 22, 0, DOOR_PX + 44, WALL + 24);
+
+  // Rebuild a very dark wall cap so no old green/cyan door line remains visible.
+  const grad = ctx.createLinearGradient(0, 0, 0, WALL + 24);
+  grad.addColorStop(0, 'rgba(2, 3, 10, 1)');
+  grad.addColorStop(1, 'rgba(6, 9, 18, 0.96)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(x - 22, 0, DOOR_PX + 44, WALL + 24);
   ctx.restore();
 }
 
