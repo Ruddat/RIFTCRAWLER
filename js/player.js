@@ -210,6 +210,10 @@ export function updatePlayer(dt) {
       p.y + Math.sin(p.facing) * 24,
       NEON_YELLOW, 5, 60, 0.3
     );
+    // Weapon FX: slash trail + impact burst
+    if (window.__weaponfx) {
+      window.__weaponfx_spawnSlashTrail(p.x, p.y, p.facing, p.weaponLevel);
+    }
   }
 
   if (p.attackCooldown > 0) p.attackCooldown -= dt;
@@ -241,6 +245,15 @@ export function updatePlayer(dt) {
       p.y + Math.sin(aimAngle) * 20,
       NEON_BLUE, 3, 40, 0.2
     );
+    // Weapon FX: muzzle flash
+    if (window.__weaponfx) {
+      window.__weaponfx_spawnMuzzleFlash(
+        p.x + Math.cos(aimAngle) * 18,
+        p.y + Math.sin(aimAngle) * 18,
+        aimAngle,
+        p.weaponLevel >= 4 ? NEON_PURPLE : NEON_BLUE
+      );
+    }
   }
 
   if (p.shootCooldown > 0) p.shootCooldown -= dt;
@@ -286,6 +299,13 @@ function spawnBomb(bx, by) {
   shakeCamera(12);
   state.screenFlash = 0.3;
   state.flashColor = NEON_RED;
+
+  // Weapon FX: shockwave + fire patch + impact burst
+  if (window.__weaponfx) {
+    window.__weaponfx_spawnShockwave(bx, by, 140, NEON_RED, 0.6);
+    window.__weaponfx_spawnImpactBurst(bx, by, NEON_YELLOW, 35);
+    window.__weaponfx_spawnFirePatch(bx, by, 25, 2.0);
+  }
 
   for (const e of state.enemies) {
     const d = dist(bx, by, e.x, e.y);
@@ -351,6 +371,20 @@ function fireLaser(p) {
   shakeCamera(4);
   spawnParticles(p.x + Math.cos(p.facing) * 20, p.y + Math.sin(p.facing) * 20, '#ff0066', 10, 80, 0.4);
   playSfx('laser');
+
+  // Weapon FX: muzzle flash + impact bursts on hit enemies
+  if (window.__weaponfx) {
+    window.__weaponfx_spawnMuzzleFlash(
+      p.x + Math.cos(p.facing) * 18,
+      p.y + Math.sin(p.facing) * 18,
+      p.facing, '#ff0066'
+    );
+    window.__weaponfx_spawnImpactBurst(
+      p.x + Math.cos(p.facing) * 150,
+      p.y + Math.sin(p.facing) * 150,
+      '#ff0066', 30
+    );
+  }
 }
 
 /** RAKETENWERFER - Explosive projectile */
@@ -373,6 +407,15 @@ function fireRocket(p) {
   spawnParticles(p.x + Math.cos(p.facing) * 20, p.y + Math.sin(p.facing) * 20, '#ff8800', 8, 60, 0.3);
   shakeCamera(3);
   playSfx('rocket');
+
+  // Weapon FX: muzzle flash for rocket
+  if (window.__weaponfx) {
+    window.__weaponfx_spawnMuzzleFlash(
+      p.x + Math.cos(p.facing) * 18,
+      p.y + Math.sin(p.facing) * 18,
+      p.facing, '#ff8800'
+    );
+  }
 }
 
 /** FLAMMENWERFER - Short range cone of fire */
@@ -419,6 +462,19 @@ function fireFlamethrower(p) {
   }
   for (const e of state.enemies) e._flameHit = false;
   playSfx('flame');
+
+  // Weapon FX: fire patches on ground
+  if (window.__weaponfx) {
+    for (let fi = 0; fi < 2; fi++) {
+      const fa = p.facing + randRange(-spread, spread);
+      const fr = randRange(20, range * 0.6);
+      window.__weaponfx_spawnFirePatch(
+        p.x + Math.cos(fa) * fr,
+        p.y + Math.sin(fa) * fr,
+        randRange(8, 16), 1.0
+      );
+    }
+  }
 }
 
 /** BLITZSCHLAG - Instant hit nearest enemy, chains */
@@ -449,6 +505,12 @@ function fireLightningBolt(p) {
   spawnDamageNumber(nearest.x, nearest.y - 10, dmg, '#ffff00');
 
   // Visual lightning from player to target
+  // Weapon FX: proper lightning bolt
+  if (window.__weaponfx) {
+    window.__weaponfx_spawnLightningBolt(p.x, p.y, nearest.x, nearest.y, '#ffff00', 0.3);
+    window.__weaponfx_triggerFlicker(0.08);
+    window.__weaponfx_spawnImpactBurst(nearest.x, nearest.y, '#ffff00', 25);
+  }
   spawnLightningParticles(p.x, p.y, nearest.x, nearest.y, '#ffff00');
 
   // Chain to up to 3 more enemies
@@ -471,6 +533,10 @@ function fireLightningBolt(p) {
     nextNearest.hp -= chainDmg;
     nextNearest.hitFlash = 1;
     spawnDamageNumber(nextNearest.x, nextNearest.y - 10, chainDmg, '#ffff00');
+    if (window.__weaponfx) {
+      window.__weaponfx_spawnLightningBolt(current.x, current.y, nextNearest.x, nextNearest.y, '#ffff44', 0.2);
+      window.__weaponfx_spawnImpactBurst(nextNearest.x, nextNearest.y, '#ffff44', 15);
+    }
     spawnLightningParticles(current.x, current.y, nextNearest.x, nextNearest.y, '#ffff44');
     current = nextNearest;
   }
@@ -630,6 +696,19 @@ function explodeRocket(b) {
   state.screenFlash = 0.3;
   state.flashColor = '#ff8800';
   spawnDamageNumber(b.x, b.y - 10, 'BOOM!', '#ff8800');
+
+  // Weapon FX: shockwave + fire patches + impact burst
+  if (window.__weaponfx) {
+    window.__weaponfx_spawnShockwave(b.x, b.y, rRadius + 20, '#ff8800', 0.5);
+    window.__weaponfx_spawnShockwave(b.x, b.y, rRadius * 0.6, NEON_YELLOW, 0.3);
+    window.__weaponfx_spawnImpactBurst(b.x, b.y, '#ff8800', 40);
+    window.__weaponfx_spawnFirePatch(b.x, b.y, 20, 1.5);
+    for (let di = 0; di < 3; di++) {
+      const da = Math.random() * Math.PI * 2;
+      const dd = randRange(20, 50);
+      window.__weaponfx_spawnFirePatch(b.x + Math.cos(da) * dd, b.y + Math.sin(da) * dd, 12, 1.0);
+    }
+  }
   for (const ae of state.enemies) {
     const d = dist(b.x, b.y, ae.x, ae.y);
     if (d < rRadius) {

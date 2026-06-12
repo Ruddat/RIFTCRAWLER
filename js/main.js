@@ -34,6 +34,9 @@ window.__powerups_spawnPowerup = spawnPowerup;
 window.__powerups_applyEffect = applyPowerupEffect;
 window.__audio = { playSfx };
 
+// --- Weapon FX bridge (loaded as separate module) ---
+// weapon-fx.js exposes window.__weaponfx and spawn functions after import
+
 // ============================================================
 // Canvas Setup
 // ============================================================
