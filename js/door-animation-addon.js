@@ -41,6 +41,7 @@ function drawAnimatedOpenDoors(ctx, room, time) {
   const cx = ROOM_WIDTH / 2;
   const cy = ROOM_HEIGHT / 2;
   const topX = cx - DOOR_PX / 2;
+  const sideY = cy - DOOR_PX / 2;
 
   if (room.doors.up) {
     coverOriginalTopDoor(ctx, topX);
@@ -52,11 +53,13 @@ function drawAnimatedOpenDoors(ctx, room, time) {
   }
 
   if (room.doors.left) {
-    drawDoorPortal(ctx, 'left', 0, cy - DOOR_PX / 2, WALL, DOOR_PX, time);
+    coverOriginalSideDoor(ctx, 'left', 0, sideY);
+    drawDoorPortal(ctx, 'left', 0, sideY, WALL, DOOR_PX, time);
   }
 
   if (room.doors.right) {
-    drawDoorPortal(ctx, 'right', ROOM_WIDTH - WALL, cy - DOOR_PX / 2, WALL, DOOR_PX, time);
+    coverOriginalSideDoor(ctx, 'right', ROOM_WIDTH - WALL, sideY);
+    drawDoorPortal(ctx, 'right', ROOM_WIDTH - WALL, sideY, WALL, DOOR_PX, time);
   }
 }
 
@@ -78,6 +81,38 @@ function coverOriginalTopDoor(ctx, x) {
   ctx.fillStyle = grad;
   ctx.fillRect(x - 72, 0, DOOR_PX + 144, WALL + 34);
 
+  ctx.restore();
+}
+
+function coverOriginalSideDoor(ctx, dir, x, y) {
+  // Hide the old side-door marker/glow that leaks as a thin vertical line above
+  // or below the animated portal. The mask is deliberately tight on the room
+  // edge but taller than the door because the original stroke uses shadowBlur.
+  ctx.save();
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = 1;
+
+  const padY = 42;
+  const padX = 18;
+  const maskX = dir === 'right' ? x - padX : x;
+  const maskW = WALL + padX;
+  const maskY = y - padY;
+  const maskH = DOOR_PX + padY * 2;
+
+  const grad = ctx.createLinearGradient(maskX, 0, maskX + maskW, 0);
+  if (dir === 'right') {
+    grad.addColorStop(0, 'rgba(6, 9, 18, 0.95)');
+    grad.addColorStop(0.45, 'rgba(3, 5, 12, 1)');
+    grad.addColorStop(1, 'rgba(2, 3, 10, 1)');
+  } else {
+    grad.addColorStop(0, 'rgba(2, 3, 10, 1)');
+    grad.addColorStop(0.55, 'rgba(3, 5, 12, 1)');
+    grad.addColorStop(1, 'rgba(6, 9, 18, 0.95)');
+  }
+
+  ctx.fillStyle = grad;
+  ctx.fillRect(maskX, maskY, maskW, maskH);
   ctx.restore();
 }
 
