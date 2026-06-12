@@ -40,45 +40,65 @@ export function drawPlayerSheetSprite(ctx, player) {
   ctx.save();
   ctx.globalAlpha *= alpha;
   ctx.imageSmoothingEnabled = true;
-  ctx.drawImage(
-    playerSheet,
-    sx,
-    sy,
-    FRAME_SIZE,
-    FRAME_SIZE,
-    player.x - half,
-    player.y - half,
-    drawSize,
-    drawSize
-  );
+
+  if (frame.flipX) {
+    ctx.translate(player.x, player.y);
+    ctx.scale(-1, 1);
+    ctx.drawImage(
+      playerSheet,
+      sx,
+      sy,
+      FRAME_SIZE,
+      FRAME_SIZE,
+      -half,
+      -half,
+      drawSize,
+      drawSize
+    );
+  } else {
+    ctx.drawImage(
+      playerSheet,
+      sx,
+      sy,
+      FRAME_SIZE,
+      FRAME_SIZE,
+      player.x - half,
+      player.y - half,
+      drawSize,
+      drawSize
+    );
+  }
+
   ctx.restore();
 
   return true;
 }
 
 function pickPlayerFrame(player) {
-  const dir = directionColumn(player.facing ?? 0);
+  const dir = directionFrame(player.facing ?? 0);
 
   if (player.attacking || player.levelUpFlash > 0) {
-    return { row: 3, col: dir };
+    return { row: 3, col: dir.col, flipX: dir.flipX };
   }
 
   const moving = Math.abs(player.vx || 0) + Math.abs(player.vy || 0) > 1;
   if (moving) {
     const step = Math.floor(state.time * 8) % 2;
-    return { row: step ? 2 : 1, col: dir };
+    return { row: step ? 2 : 1, col: dir.col, flipX: dir.flipX };
   }
 
-  return { row: 0, col: dir };
+  return { row: 0, col: dir.col, flipX: dir.flipX };
 }
 
-function directionColumn(angle) {
+function directionFrame(angle) {
   const full = Math.PI * 2;
   const a = ((angle % full) + full) % full;
 
-  // Sheet columns: 0 front/down, 1 back/up, 2 left-facing, 3 right-facing.
-  if (a >= Math.PI * 0.25 && a < Math.PI * 0.75) return 0;
-  if (a >= Math.PI * 0.75 && a < Math.PI * 1.25) return 2;
-  if (a >= Math.PI * 1.25 && a < Math.PI * 1.75) return 1;
-  return 3;
+  // Sheet columns: 0 front/down, 1 back/up, 3 right-facing.
+  // Left movement mirrors the right-facing column because the dedicated left
+  // sheet column is not aligned consistently with the right animation frames.
+  if (a >= Math.PI * 0.25 && a < Math.PI * 0.75) return { col: 0, flipX: false };
+  if (a >= Math.PI * 0.75 && a < Math.PI * 1.25) return { col: 3, flipX: true };
+  if (a >= Math.PI * 1.25 && a < Math.PI * 1.75) return { col: 1, flipX: false };
+  return { col: 3, flipX: false };
 }
