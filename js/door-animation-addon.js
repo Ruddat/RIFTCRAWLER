@@ -39,9 +39,12 @@ function loop() {
 
 function drawAnimatedOpenDoors(ctx, room, time) {
   const cx = ROOM_WIDTH / 2;
-  const cy = ROOM_HEIGHT / 2;
   const topX = cx - DOOR_PX / 2;
-  const sideY = cy - DOOR_PX / 2;
+
+  // Match room.js side-door slot exactly: Math.floor(ROOM_TILES_Y / 2) - 1.
+  // Previous centering put the animated side door 16px too low and left the old
+  // cyan/green door stroke visible above it.
+  const sideY = (Math.floor((ROOM_HEIGHT / TILE_SIZE) / 2) - 1) * TILE_SIZE;
 
   if (room.doors.up) {
     coverOriginalTopDoor(ctx, topX);
@@ -85,16 +88,15 @@ function coverOriginalTopDoor(ctx, x) {
 }
 
 function coverOriginalSideDoor(ctx, dir, x, y) {
-  // Hide the old side-door marker/glow that leaks as a thin vertical line above
-  // or below the animated portal. The mask is deliberately tight on the room
-  // edge but taller than the door because the original stroke uses shadowBlur.
+  // Hide the old side-door marker/glow. The animated side door now aligns with
+  // the original slot, so this mask only needs to absorb shadowBlur bleed.
   ctx.save();
   ctx.globalCompositeOperation = 'source-over';
   ctx.shadowBlur = 0;
   ctx.globalAlpha = 1;
 
-  const padY = 42;
-  const padX = 18;
+  const padY = 16;
+  const padX = 20;
   const maskX = dir === 'right' ? x - padX : x;
   const maskW = WALL + padX;
   const maskY = y - padY;
@@ -102,13 +104,13 @@ function coverOriginalSideDoor(ctx, dir, x, y) {
 
   const grad = ctx.createLinearGradient(maskX, 0, maskX + maskW, 0);
   if (dir === 'right') {
-    grad.addColorStop(0, 'rgba(6, 9, 18, 0.95)');
+    grad.addColorStop(0, 'rgba(6, 9, 18, 0.96)');
     grad.addColorStop(0.45, 'rgba(3, 5, 12, 1)');
     grad.addColorStop(1, 'rgba(2, 3, 10, 1)');
   } else {
     grad.addColorStop(0, 'rgba(2, 3, 10, 1)');
     grad.addColorStop(0.55, 'rgba(3, 5, 12, 1)');
-    grad.addColorStop(1, 'rgba(6, 9, 18, 0.95)');
+    grad.addColorStop(1, 'rgba(6, 9, 18, 0.96)');
   }
 
   ctx.fillStyle = grad;
