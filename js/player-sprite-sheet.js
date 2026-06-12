@@ -6,7 +6,6 @@ import { state } from './state.js';
 
 const PLAYER_SHEET_URL = 'assets/sprites/player-rogue-sheet.png';
 const FRAME_SIZE = 128;
-const COLUMNS = 4;
 
 const playerSheet = new Image();
 let ready = false;
@@ -77,9 +76,9 @@ function directionColumn(angle) {
   const full = Math.PI * 2;
   const a = ((angle % full) + full) % full;
 
-  // Columns: 0 front/down, 1 back/up, 2 right, 3 left
+  // Sheet columns: 0 front/down, 1 back/up, 2 left-facing, 3 right-facing.
   if (a >= Math.PI * 0.25 && a < Math.PI * 0.75) return 0;
-  if (a >= Math.PI * 0.75 && a < Math.PI * 1.25) return 3;
+  if (a >= Math.PI * 0.75 && a < Math.PI * 1.25) return 2;
   if (a >= Math.PI * 1.25 && a < Math.PI * 1.75) return 1;
-  return 2;
+  return 3;
 }
