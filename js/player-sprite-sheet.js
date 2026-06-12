@@ -94,11 +94,10 @@ function directionFrame(angle) {
   const full = Math.PI * 2;
   const a = ((angle % full) + full) % full;
 
-  // Sheet columns: 0 front/down, 1 back/up, 3 right-facing.
-  // Left movement mirrors the right-facing column because the dedicated left
-  // sheet column is not aligned consistently with the right animation frames.
+  // Sheet columns: 0 front/down, 1 back/up, 3 side-facing.
+  // Side direction is mirrored because the sheet orientation is opposite to gameplay facing.
   if (a >= Math.PI * 0.25 && a < Math.PI * 0.75) return { col: 0, flipX: false };
-  if (a >= Math.PI * 0.75 && a < Math.PI * 1.25) return { col: 3, flipX: true };
+  if (a >= Math.PI * 0.75 && a < Math.PI * 1.25) return { col: 3, flipX: false };
   if (a >= Math.PI * 1.25 && a < Math.PI * 1.75) return { col: 1, flipX: false };
-  return { col: 3, flipX: false };
+  return { col: 3, flipX: true };
 }
