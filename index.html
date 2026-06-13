@@ -18,11 +18,17 @@
   </script>
   <script src="js/level-background-prehook.js"></script>
   <script type="module" src="js/main.js"></script>
-  <script type="module" src="js/weapon-fx.js"></script>
-  <script type="module" src="js/sprite-overlay-autoload.js"></script>
-  <script type="module" src="js/chain-lightning-addon.js"></script>
-  <script type="module" src="js/door-animation-addon.js"></script>
   <script type="module" src="js/ending-test-addon.js"></script>
-  <!-- weather-atmosphere-addon.js is disabled until it is integrated into the main render stack. -->
+  <!--
+    Disabled render-loop addons while render ownership is centralized in main.js:
+    - js/weapon-fx.js
+    - js/sprite-overlay-autoload.js
+    - js/chain-lightning-addon.js
+    - js/door-animation-addon.js
+    - js/weather-atmosphere-addon.js
+
+    These modules drew directly into the same canvas after main.js, which caused
+    duplicate bullets/effects/sprites and unpredictable layer order.
+  -->
 </body>
 </html>
