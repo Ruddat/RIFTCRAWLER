@@ -324,8 +324,7 @@ function renderGame() {
   // Game entities – also in room-local coords
   drawPowerups(ctx);
   drawBullets(ctx);
-  drawEnemies(ctx);
-  drawPlayer(ctx);
+  drawPrimitiveCharactersIfNeeded(ctx);
   drawEffects(ctx);
 
   // Vignette overlay (room-local coords)
@@ -345,6 +344,15 @@ function renderGame() {
   drawHud(ctx);
 }
 
+function drawPrimitiveCharactersIfNeeded(ctx) {
+  // The sprite overlay owns player/enemy character bodies once its assets are ready.
+  // Keep primitive fallback only while sprites are still loading.
+  if (window.__spriteOverlayReady) return;
+
+  drawEnemies(ctx);
+  drawPlayer(ctx);
+}
+
 // ============================================================
 // Pause Screen
 // ============================================================
@@ -357,8 +365,7 @@ function renderPauseScreen() {
   drawWeatherAtmosphere(ctx);
   drawPowerups(ctx);
   drawBullets(ctx);
-  drawEnemies(ctx);
-  drawPlayer(ctx);
+  drawPrimitiveCharactersIfNeeded(ctx);
   drawEffects(ctx);
   ctx.restore();
   drawHud(ctx);
