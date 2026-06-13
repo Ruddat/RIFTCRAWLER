@@ -52,6 +52,14 @@ import { stopMusic } from './audio.js';
     'THE END'
   ];
 
+  const FINAL_CREDITS = [
+    'THANKS FOR PLAYING',
+    '',
+    'GAME DESIGN & IDEA',
+    'INGO RUDDAT',
+    'THE FOX'
+  ];
+
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas?.getContext('2d');
   if (!canvas || !ctx) return;
@@ -223,6 +231,7 @@ import { stopMusic } from './audio.js';
     drawEndingParticles(w, h, 'behind');
     drawHeader(w, h, t);
     drawStoryScroller(w, h, t);
+    drawFinalCredits(w, h, t);
     drawEndingParticles(w, h, 'front');
     drawFooter(w, h, t);
     drawScanlines(w, h, t);
@@ -300,6 +309,7 @@ import { stopMusic } from './audio.js';
   }
 
   function spawnEmber(w, h, boost) {
+    const maxLife = 5 + Math.random() * 5;
     embers.push({
       layer: Math.random() < 0.65 ? 'behind' : 'front',
       x: Math.random() * w,
@@ -308,8 +318,8 @@ import { stopMusic } from './audio.js';
       vy: 18 + Math.random() * 34 + boost * 22,
       drift: 0.6 + Math.random() * 1.8,
       size: 1 + Math.random() * 2.4,
-      life: 5 + Math.random() * 5,
-      maxLife: 5 + Math.random() * 5,
+      life: maxLife,
+      maxLife,
       alpha: 0.12 + Math.random() * 0.32,
       hue: Math.random() < 0.55 ? 'cyan' : 'violet',
       spin: Math.random() * Math.PI * 2,
@@ -318,6 +328,7 @@ import { stopMusic } from './audio.js';
   }
 
   function spawnSpark(w, h, boost) {
+    const maxLife = 1.1 + Math.random() * 1.4;
     sparks.push({
       layer: Math.random() < 0.35 ? 'behind' : 'front',
       x: Math.random() * w,
@@ -326,8 +337,8 @@ import { stopMusic } from './audio.js';
       vy: 120 + Math.random() * 160 + boost * 110,
       drift: 1 + Math.random() * 3,
       size: 1.4 + Math.random() * 3.2 + boost * 1.5,
-      life: 1.1 + Math.random() * 1.4,
-      maxLife: 1.1 + Math.random() * 1.4,
+      life: maxLife,
+      maxLife,
       alpha: 0.45 + Math.random() * 0.5,
       hue: Math.random() < 0.68 ? 'gold' : 'magenta',
       spin: Math.random() * Math.PI * 2,
@@ -440,10 +451,14 @@ import { stopMusic } from './audio.js';
 
   function drawStoryScroller(w, h, t) {
     const panelX = w / 2 - 390;
-    const { panelY, panelH, scrollY } = getScrollerMetrics(w, h);
+    const { panelY, panelH, scrollY, endProgress } = getScrollerMetrics(w, h);
     const panelW = 780;
+    const storyAlpha = 1 - endProgress;
+
+    if (storyAlpha <= 0.02) return;
 
     ctx.save();
+    ctx.globalAlpha = storyAlpha;
 
     ctx.fillStyle = 'rgba(2, 6, 18, 0.42)';
     roundRect(panelX, panelY, panelW, panelH, 20, true, false);
@@ -488,6 +503,58 @@ import { stopMusic } from './audio.js';
     });
 
     ctx.restore();
+  }
+
+  function drawFinalCredits(w, h, t) {
+    const { panelY, panelH, endProgress } = getScrollerMetrics(w, h);
+    if (endProgress <= 0.02) return;
+
+    const alpha = smoothstep(0, 1, endProgress);
+    const panelX = w / 2 - 390;
+    const panelW = 780;
+    const centerY = panelY + panelH * 0.5;
+    const breathe = Math.sin(t * 1.8) * 4;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    ctx.fillStyle = 'rgba(2, 6, 18, 0.58)';
+    roundRect(panelX, panelY, panelW, panelH, 24, true, false);
+    ctx.strokeStyle = `rgba(255, 243, 163, ${0.28 + alpha * 0.22})`;
+    ctx.lineWidth = 1.6;
+    roundRect(panelX, panelY, panelW, panelH, 24, false, true);
+
+    ctx.textAlign = 'center';
+
+    ctx.font = 'bold 46px monospace';
+    ctx.fillStyle = '#fff3a3';
+    ctx.shadowColor = '#fff3a3';
+    ctx.shadowBlur = 26;
+    ctx.fillText(FINAL_CREDITS[0], w / 2, centerY - 74 + breathe);
+
+    ctx.font = '16px monospace';
+    ctx.fillStyle = 'rgba(255,255,255,0.70)';
+    ctx.shadowBlur = 0;
+    ctx.fillText(FINAL_CREDITS[2], w / 2, centerY - 12);
+
+    ctx.font = 'bold 28px monospace';
+    ctx.fillStyle = '#21e6ff';
+    ctx.shadowColor = '#21e6ff';
+    ctx.shadowBlur = 18;
+    ctx.fillText(FINAL_CREDITS[3], w / 2, centerY + 30);
+
+    ctx.font = 'bold 24px monospace';
+    ctx.fillStyle = '#ff2bd6';
+    ctx.shadowColor = '#ff2bd6';
+    ctx.shadowBlur = 18;
+    ctx.fillText(FINAL_CREDITS[4], w / 2, centerY + 68);
+
+    ctx.restore();
+  }
+
+  function smoothstep(edge0, edge1, value) {
+    const x = Math.min(1, Math.max(0, (value - edge0) / (edge1 - edge0)));
+    return x * x * (3 - 2 * x);
   }
 
   function drawFooter(w, h, t) {
