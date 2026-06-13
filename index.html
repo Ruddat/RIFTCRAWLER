@@ -16,16 +16,8 @@
     var KNOCKBACK_DURATION = 0.15;
     var playSfx = function () {};
   </script>
+  <script src="js/level-background-prehook.js"></script>
   <script type="module" src="js/main.js"></script>
   <script type="module" src="js/ending-test-addon.js"></script>
-  <!--
-    Disabled while render ownership is centralized in main.js:
-    - js/level-background-prehook.js       global fillRect monkey-patch, caused background to replace overlays
-    - js/weapon-fx.js                      separate render loop
-    - js/sprite-overlay-autoload.js        separate render loop
-    - js/chain-lightning-addon.js          separate render loop
-    - js/door-animation-addon.js           separate render loop
-    - js/weather-atmosphere-addon.js       separate render loop
-  -->
 </body>
 </html>
