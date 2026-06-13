@@ -19,6 +19,7 @@ import { stopMusic } from './audio.js';
   const endingBg = new Image();
   endingBg.src = BG_URL;
 
+  let active = false;
   let endingTime = 0;
   let endingStartedAt = 0;
   let endingMusic = null;
@@ -31,29 +32,38 @@ import { stopMusic } from './audio.js';
 
   function enterEndingTest() {
     const state = getState();
-    if (!state) return;
 
-    stopMusic();
-    state.screen = ENDING_SCREEN;
-    state.running = false;
-    state.paused = false;
-    state.floorTransition = false;
-    state.screenFlash = 0;
+    active = true;
     endingStartedAt = performance.now();
     endingTime = 0;
 
+    try { stopMusic(); } catch (e) { /* game audio not ready */ }
+
+    if (state) {
+      state.screen = ENDING_SCREEN;
+      state.running = false;
+      state.paused = false;
+      state.floorTransition = false;
+      state.screenFlash = 0;
+    }
+
     window.__audio?.playSfx?.('clear');
     startEndingMusic();
+    drawEndingScreen();
   }
 
   function leaveEndingTest() {
-    const state = getState();
-    if (!state || state.screen !== ENDING_SCREEN) return;
+    if (!active) return;
 
+    active = false;
     stopEndingMusic();
-    state.screen = 'title';
-    state.running = false;
-    state.paused = false;
+
+    const state = getState();
+    if (state) {
+      state.screen = 'title';
+      state.running = false;
+      state.paused = false;
+    }
   }
 
   function startEndingMusic() {
@@ -114,26 +124,27 @@ import { stopMusic } from './audio.js';
     });
   }
 
-  window.addEventListener('keydown', event => {
-    const state = getState();
-    if (!state) return;
+  window.__showEndingTest = enterEndingTest;
+  window.__hideEndingTest = leaveEndingTest;
 
+  window.addEventListener('keydown', event => {
     if (event.code === TEST_KEY) {
       event.preventDefault();
+      event.stopPropagation();
       enterEndingTest();
       return;
     }
 
-    if (state.screen === ENDING_SCREEN && (event.code === 'Enter' || event.code === 'Escape')) {
+    if (active && (event.code === 'Enter' || event.code === 'Escape')) {
       event.preventDefault();
+      event.stopPropagation();
       leaveEndingTest();
     }
-  });
+  }, true);
 
   function renderLoop(now) {
     requestAnimationFrame(renderLoop);
-    const state = getState();
-    if (!state || state.screen !== ENDING_SCREEN) return;
+    if (!active) return;
 
     endingTime = (now - endingStartedAt) / 1000;
     drawEndingScreen();
