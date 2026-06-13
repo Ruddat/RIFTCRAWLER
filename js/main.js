@@ -19,6 +19,7 @@ import { updateEffects, drawEffects, spawnParticles, spawnDamageNumber, spawnRin
 import { spawnPowerup, updatePowerups, drawPowerups, applyPowerupEffect } from './powerups.js';
 import { drawHud } from './hud.js';
 import { initAudio, playSfx, startMusic, stopMusic } from './audio.js';
+import { updateWeatherAtmosphere, drawWeatherAtmosphere } from './weather.js';
 import { clamp, randRange } from './utils.js';
 
 // --- Expose modules for circular-dependency workarounds ---
@@ -240,6 +241,7 @@ function updateGame(dt) {
   updateEffects(effectiveDt);
   updatePowerups(effectiveDt);
   updateCamera(effectiveDt);
+  updateWeatherAtmosphere(effectiveDt);
 
   // Check if boss was killed → advance floor
   checkFloorAdvance();
@@ -313,8 +315,11 @@ function renderGame() {
   ctx.save();
   ctx.translate(ROOM_OFFSET_X + state.camera.shakeX, ROOM_OFFSET_Y + state.camera.shakeY);
 
-  // Room (floor, walls, doors, atmosphere) – drawn in room-local coords
+  // Room background first
   drawRoom(ctx);
+
+  // Weather is intentionally behind entities, but above room background.
+  drawWeatherAtmosphere(ctx);
 
   // Game entities – also in room-local coords
   drawPowerups(ctx);
@@ -349,6 +354,7 @@ function renderPauseScreen() {
   ctx.save();
   ctx.translate(ROOM_OFFSET_X + state.camera.shakeX, ROOM_OFFSET_Y + state.camera.shakeY);
   drawRoom(ctx);
+  drawWeatherAtmosphere(ctx);
   drawPowerups(ctx);
   drawBullets(ctx);
   drawEnemies(ctx);
