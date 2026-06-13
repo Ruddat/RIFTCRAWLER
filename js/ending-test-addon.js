@@ -11,6 +11,45 @@ import { stopMusic } from './audio.js';
   const ENDING_SCREEN = 'ending-test';
   const BG_URL = 'assets/backgrounds/ending.png';
   const MUSIC_URL = 'assets/audio/ending.mp3';
+  const SCROLL_SPEED = 24; // px per second
+
+  const ENDING_STORY = [
+    'TIEF UNTER DEN ZERBROCHENEN HALLEN',
+    'verstummte der letzte Waechter des Rifts.',
+    '',
+    'Was einst als Riss im Stein begann,',
+    'wuchs zu einem Hunger zwischen den Welten.',
+    '',
+    'Etage um Etage fraß sich die Dunkelheit',
+    'durch Krypten, Abgruende und vergessene Tore.',
+    '',
+    'Doch einer stieg hinab,',
+    'nicht weil er unsterblich war,',
+    'sondern weil niemand sonst zurueckkehrte.',
+    '',
+    'Klingen zerbrachen.',
+    'Bomben vergluehten.',
+    'Das Echo der Monster wurde leiser.',
+    '',
+    'Im Nexus blieb nur der Puls des Rifts,',
+    'ein kaltes Licht, das Namen vergessen macht.',
+    '',
+    'Dann fiel der letzte Schlag.',
+    'Der Raum atmete aus.',
+    'Und die Welten fanden ihre Grenzen wieder.',
+    '',
+    'Der Crawler trat aus dem Licht,',
+    'gezeichnet von Staub, Gold und alten Narben.',
+    '',
+    'Ob der Rift fuer immer geschlossen bleibt,',
+    'weiss niemand.',
+    '',
+    'Aber heute schweigt die Tiefe.',
+    'Heute gehoert die Nacht dir.',
+    '',
+    'RIFT CRAWLER',
+    'THE END'
+  ];
 
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas?.getContext('2d');
@@ -168,7 +207,9 @@ import { stopMusic } from './audio.js';
     ctx.fillStyle = `rgba(0, 0, 0, ${pulse})`;
     ctx.fillRect(0, 0, w, h);
 
-    drawFinalText(w, h, t);
+    drawHeader(w, h, t);
+    drawStoryScroller(w, h, t);
+    drawFooter(w, h, t);
     drawScanlines(w, h, t);
 
     ctx.restore();
@@ -202,11 +243,11 @@ import { stopMusic } from './audio.js';
     }
   }
 
-  function drawFinalText(w, h, t) {
+  function drawHeader(w, h, t) {
     ctx.textAlign = 'center';
 
-    const titleY = h * 0.16;
-    ctx.font = 'bold 48px monospace';
+    const titleY = h * 0.12;
+    ctx.font = 'bold 44px monospace';
     ctx.fillStyle = '#fff3a3';
     ctx.shadowColor = '#fff3a3';
     ctx.shadowBlur = 22;
@@ -215,20 +256,81 @@ import { stopMusic } from './audio.js';
     ctx.shadowBlur = 10;
     ctx.shadowColor = '#21e6ff';
     ctx.fillStyle = '#21e6ff';
-    ctx.font = '18px monospace';
-    ctx.fillText('Die letzte Kammer verstummt. Nur dein Echo bleibt.', w / 2, titleY + 38);
+    ctx.font = '17px monospace';
+    ctx.fillText('Die letzte Kammer verstummt. Nur dein Echo bleibt.', w / 2, titleY + 34);
 
-    const panelY = h * 0.82;
+    ctx.shadowBlur = 0;
+  }
+
+  function drawStoryScroller(w, h, t) {
+    const panelX = w / 2 - 390;
+    const panelY = h * 0.24;
+    const panelW = 780;
+    const panelH = h * 0.46;
+    const lineHeight = 28;
+    const startY = panelY + panelH + 40;
+    const scrollY = startY - t * SCROLL_SPEED;
+
+    ctx.save();
+
+    ctx.fillStyle = 'rgba(2, 6, 18, 0.42)';
+    roundRect(panelX, panelY, panelW, panelH, 20, true, false);
+    ctx.strokeStyle = 'rgba(33,230,255,0.28)';
+    ctx.lineWidth = 1.2;
+    roundRect(panelX, panelY, panelW, panelH, 20, false, true);
+
+    ctx.beginPath();
+    ctx.rect(panelX + 24, panelY + 18, panelW - 48, panelH - 36);
+    ctx.clip();
+
+    ctx.textAlign = 'center';
+    ctx.font = '18px monospace';
+
+    ENDING_STORY.forEach((line, index) => {
+      const y = scrollY + index * lineHeight;
+      if (y < panelY - 20 || y > panelY + panelH + 30) return;
+
+      const edgeFadeTop = Math.min(1, Math.max(0, (y - panelY) / 52));
+      const edgeFadeBottom = Math.min(1, Math.max(0, (panelY + panelH - y) / 52));
+      const alpha = Math.min(edgeFadeTop, edgeFadeBottom, 0.95);
+
+      if (line === 'RIFT CRAWLER' || line === 'THE END') {
+        ctx.font = line === 'THE END' ? 'bold 30px monospace' : 'bold 24px monospace';
+        ctx.fillStyle = line === 'THE END'
+          ? `rgba(255, 243, 163, ${alpha})`
+          : `rgba(33, 230, 255, ${alpha})`;
+        ctx.shadowColor = line === 'THE END' ? '#fff3a3' : '#21e6ff';
+        ctx.shadowBlur = 14;
+      } else if (line === line.toUpperCase() && line.length > 0) {
+        ctx.font = 'bold 18px monospace';
+        ctx.fillStyle = `rgba(255, 43, 214, ${alpha})`;
+        ctx.shadowColor = '#ff2bd6';
+        ctx.shadowBlur = 8;
+      } else {
+        ctx.font = '18px monospace';
+        ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.86})`;
+        ctx.shadowBlur = 0;
+      }
+
+      if (line.length > 0) ctx.fillText(line, w / 2, y);
+    });
+
+    ctx.restore();
+  }
+
+  function drawFooter(w, h, t) {
+    const panelY = h * 0.84;
+    ctx.textAlign = 'center';
     ctx.shadowBlur = 0;
     ctx.fillStyle = 'rgba(2, 6, 18, 0.62)';
-    roundRect(w / 2 - 300, panelY - 62, 600, 112, 18, true, false);
+    roundRect(w / 2 - 300, panelY - 54, 600, 104, 18, true, false);
     ctx.strokeStyle = 'rgba(33,230,255,0.45)';
     ctx.lineWidth = 1.5;
-    roundRect(w / 2 - 300, panelY - 62, 600, 112, 18, false, true);
+    roundRect(w / 2 - 300, panelY - 54, 600, 104, 18, false, true);
 
     ctx.fillStyle = 'rgba(255,255,255,0.84)';
     ctx.font = '16px monospace';
-    ctx.fillText('FINAL PROTOTYPE  //  TESTTASTE: O', w / 2, panelY - 22);
+    ctx.fillText('FINAL STORY SCROLLER  //  TESTTASTE: O', w / 2, panelY - 18);
     ctx.fillStyle = 'rgba(255,255,255,0.62)';
     ctx.fillText('ENTER / ESC – Zurueck zum Titel', w / 2, panelY + 12);
 
@@ -237,7 +339,7 @@ import { stopMusic } from './audio.js';
       ctx.fillStyle = '#ff2bd6';
       ctx.shadowColor = '#ff2bd6';
       ctx.shadowBlur = 10;
-      ctx.fillText('ENDING TRACK AKTIV', w / 2, panelY + 40);
+      ctx.fillText('ENDING TRACK AKTIV', w / 2, panelY + 38);
       ctx.shadowBlur = 0;
     }
   }
