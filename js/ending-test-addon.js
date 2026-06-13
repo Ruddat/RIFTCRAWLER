@@ -4,6 +4,8 @@
 // Isolated finale prototype. Press O to preview the ending screen.
 // Enter / Escape returns to the title screen.
 
+import { stopMusic } from './audio.js';
+
 (function () {
   const TEST_KEY = 'KeyO';
   const ENDING_SCREEN = 'ending-test';
@@ -31,6 +33,7 @@
     const state = getState();
     if (!state) return;
 
+    stopMusic();
     state.screen = ENDING_SCREEN;
     state.running = false;
     state.paused = false;
@@ -144,25 +147,18 @@
     ctx.save();
     ctx.clearRect(0, 0, w, h);
 
-    // Base background image with procedural fallback.
     if (endingBg.complete && endingBg.naturalWidth > 0) {
       ctx.drawImage(endingBg, 0, 0, w, h);
     } else {
       drawProceduralNexus(w, h, t);
     }
 
-    // Slow dark pulse.
     const pulse = 0.18 + Math.sin(t * 1.2) * 0.04;
     ctx.fillStyle = `rgba(0, 0, 0, ${pulse})`;
     ctx.fillRect(0, 0, w, h);
 
-    // Closing rift / core.
     drawRiftCore(w / 2, h / 2 - 38, 96 + Math.sin(t * 2.0) * 8, t);
-
-    // Credits plate.
     drawFinalText(w, h, t);
-
-    // Screen grain / scanlines.
     drawScanlines(w, h, t);
 
     ctx.restore();
@@ -250,7 +246,7 @@
     ctx.font = '16px monospace';
     ctx.fillText('FINAL PROTOTYPE  //  TESTTASTE: O', w / 2, panelY - 28);
     ctx.fillStyle = 'rgba(255,255,255,0.58)';
-    ctx.fillText('ENTER / ESC – Zurück zum Titel', w / 2, panelY + 6);
+    ctx.fillText('ENTER / ESC – Zurueck zum Titel', w / 2, panelY + 6);
 
     const blink = Math.sin(t * 3) > 0;
     if (blink) {
