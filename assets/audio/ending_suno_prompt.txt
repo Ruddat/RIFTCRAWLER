@@ -1,0 +1,12 @@
+RIFT CRAWLER – Ending Theme / Final Screen
+
+Dark fantasy synthwave dungeon crawler ending theme, slow closing rift ambience, deep sub bass drone, ancient stone chamber reverb, distant choir pads, low heartbeat percussion, metallic echoes, soft crackling magic particles, cinematic but playable loop, 88 BPM, minor key, melancholic victory, no vocals, seamless game loop, 2 minutes.
+
+Optional SFX layer:
+- distant rumble every 8 bars
+- reversed shimmer when the rift pulse appears
+- faint chain clinks and dust falls
+- final low impact hit before loop restarts
+
+Export name expected by the game:
+assets/audio/ending.mp3
