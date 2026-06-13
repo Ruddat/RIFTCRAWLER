@@ -12,6 +12,7 @@ import { stopMusic } from './audio.js';
   const BG_URL = 'assets/backgrounds/ending.png';
   const MUSIC_URL = 'assets/audio/ending.mp3';
   const SCROLL_SPEED = 24; // px per second
+  const LINE_HEIGHT = 28;
 
   const ENDING_STORY = [
     'TIEF UNTER DEN ZERBROCHENEN HALLEN',
@@ -20,7 +21,7 @@ import { stopMusic } from './audio.js';
     'Was einst als Riss im Stein begann,',
     'wuchs zu einem Hunger zwischen den Welten.',
     '',
-    'Etage um Etage fraß sich die Dunkelheit',
+    'Etage um Etage frass sich die Dunkelheit',
     'durch Krypten, Abgruende und vergessene Tore.',
     '',
     'Doch einer stieg hinab,',
@@ -61,9 +62,14 @@ import { stopMusic } from './audio.js';
   let active = false;
   let endingTime = 0;
   let endingStartedAt = 0;
+  let lastFrameTime = 0;
   let endingMusic = null;
   let fallbackAudioCtx = null;
   let fallbackNodes = [];
+  let sparks = [];
+  let embers = [];
+  let sparkSpawnAcc = 0;
+  let emberSpawnAcc = 0;
 
   function getState() {
     return window.__state || null;
@@ -74,7 +80,9 @@ import { stopMusic } from './audio.js';
 
     active = true;
     endingStartedAt = performance.now();
+    lastFrameTime = endingStartedAt;
     endingTime = 0;
+    resetEndingParticles();
 
     try { stopMusic(); } catch (e) { /* game audio not ready */ }
 
@@ -88,7 +96,7 @@ import { stopMusic } from './audio.js';
 
     window.__audio?.playSfx?.('clear');
     startEndingMusic();
-    drawEndingScreen();
+    drawEndingScreen(0);
   }
 
   function leaveEndingTest() {
@@ -96,6 +104,7 @@ import { stopMusic } from './audio.js';
 
     active = false;
     stopEndingMusic();
+    resetEndingParticles();
 
     const state = getState();
     if (state) {
@@ -185,8 +194,11 @@ import { stopMusic } from './audio.js';
     requestAnimationFrame(renderLoop);
     if (!active) return;
 
+    const dt = Math.min((now - lastFrameTime) / 1000, 0.05);
+    lastFrameTime = now;
     endingTime = (now - endingStartedAt) / 1000;
-    drawEndingScreen();
+    updateEndingParticles(dt);
+    drawEndingScreen(dt);
   }
 
   function drawEndingScreen() {
@@ -207,8 +219,11 @@ import { stopMusic } from './audio.js';
     ctx.fillStyle = `rgba(0, 0, 0, ${pulse})`;
     ctx.fillRect(0, 0, w, h);
 
+    drawRiftShimmers(w, h, t);
+    drawEndingParticles(w, h, 'behind');
     drawHeader(w, h, t);
     drawStoryScroller(w, h, t);
+    drawEndingParticles(w, h, 'front');
     drawFooter(w, h, t);
     drawScanlines(w, h, t);
 
@@ -243,6 +258,167 @@ import { stopMusic } from './audio.js';
     }
   }
 
+  function getScrollerMetrics(w, h) {
+    const panelY = h * 0.24;
+    const panelH = h * 0.46;
+    const startY = panelY + panelH + 40;
+    const totalHeight = ENDING_STORY.length * LINE_HEIGHT;
+    const scrollY = startY - endingTime * SCROLL_SPEED;
+    const endProgress = Math.min(1, Math.max(0, (panelY - (scrollY + totalHeight)) / 180));
+    const nearEnd = Math.min(1, Math.max(0, (endingTime - Math.max(0, (totalHeight - panelH) / SCROLL_SPEED)) / 8));
+
+    return { panelY, panelH, startY, totalHeight, scrollY, endProgress, nearEnd };
+  }
+
+  function resetEndingParticles() {
+    sparks = [];
+    embers = [];
+    sparkSpawnAcc = 0;
+    emberSpawnAcc = 0;
+  }
+
+  function updateEndingParticles(dt) {
+    const w = canvas.width;
+    const h = canvas.height;
+    const metrics = getScrollerMetrics(w, h);
+    const finaleBoost = Math.max(metrics.nearEnd, metrics.endProgress);
+
+    emberSpawnAcc += dt * (10 + finaleBoost * 16);
+    while (emberSpawnAcc >= 1) {
+      emberSpawnAcc -= 1;
+      spawnEmber(w, h, finaleBoost);
+    }
+
+    sparkSpawnAcc += dt * (2.5 + finaleBoost * 12);
+    while (sparkSpawnAcc >= 1) {
+      sparkSpawnAcc -= 1;
+      spawnSpark(w, h, finaleBoost);
+    }
+
+    embers = embers.filter(p => updateParticle(p, dt, w, h));
+    sparks = sparks.filter(p => updateParticle(p, dt, w, h));
+  }
+
+  function spawnEmber(w, h, boost) {
+    embers.push({
+      layer: Math.random() < 0.65 ? 'behind' : 'front',
+      x: Math.random() * w,
+      y: -12 - Math.random() * 80,
+      vx: -12 + Math.random() * 24,
+      vy: 18 + Math.random() * 34 + boost * 22,
+      drift: 0.6 + Math.random() * 1.8,
+      size: 1 + Math.random() * 2.4,
+      life: 5 + Math.random() * 5,
+      maxLife: 5 + Math.random() * 5,
+      alpha: 0.12 + Math.random() * 0.32,
+      hue: Math.random() < 0.55 ? 'cyan' : 'violet',
+      spin: Math.random() * Math.PI * 2,
+      kind: 'ember'
+    });
+  }
+
+  function spawnSpark(w, h, boost) {
+    sparks.push({
+      layer: Math.random() < 0.35 ? 'behind' : 'front',
+      x: Math.random() * w,
+      y: -20 - Math.random() * 140,
+      vx: -55 + Math.random() * 110,
+      vy: 120 + Math.random() * 160 + boost * 110,
+      drift: 1 + Math.random() * 3,
+      size: 1.4 + Math.random() * 3.2 + boost * 1.5,
+      life: 1.1 + Math.random() * 1.4,
+      maxLife: 1.1 + Math.random() * 1.4,
+      alpha: 0.45 + Math.random() * 0.5,
+      hue: Math.random() < 0.68 ? 'gold' : 'magenta',
+      spin: Math.random() * Math.PI * 2,
+      kind: 'spark'
+    });
+  }
+
+  function updateParticle(p, dt, w, h) {
+    p.life -= dt;
+    p.spin += dt * p.drift;
+    p.x += (p.vx + Math.sin(p.spin) * 18) * dt;
+    p.y += p.vy * dt;
+    p.vy += (p.kind === 'spark' ? 80 : 10) * dt;
+
+    return p.life > 0 && p.y < h + 90 && p.x > -120 && p.x < w + 120;
+  }
+
+  function drawEndingParticles(w, h, layer) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+
+    for (const p of embers) {
+      if (p.layer !== layer) continue;
+      const fade = Math.max(0, p.life / p.maxLife);
+      const alpha = p.alpha * Math.min(1, fade * 1.4);
+      const color = p.hue === 'cyan'
+        ? `rgba(33,230,255,${alpha})`
+        : `rgba(180,77,255,${alpha})`;
+
+      ctx.fillStyle = color;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    for (const p of sparks) {
+      if (p.layer !== layer) continue;
+      const fade = Math.max(0, p.life / p.maxLife);
+      const alpha = p.alpha * Math.min(1, fade * 1.7);
+      const color = p.hue === 'gold'
+        ? `rgba(255,220,120,${alpha})`
+        : `rgba(255,43,214,${alpha})`;
+      const tail = 10 + p.size * 6;
+
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 14;
+      ctx.lineWidth = Math.max(1, p.size * 0.7);
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(p.x - p.vx * 0.035, p.y - tail);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+
+  function drawRiftShimmers(w, h, t) {
+    const metrics = getScrollerMetrics(w, h);
+    const boost = Math.max(metrics.nearEnd, metrics.endProgress);
+    if (boost <= 0.02) return;
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.textAlign = 'center';
+
+    for (let i = 0; i < 4; i++) {
+      const alpha = (0.05 + boost * 0.12) * (0.6 + Math.sin(t * 2.4 + i) * 0.4);
+      const radiusX = 160 + i * 52 + Math.sin(t * 1.7 + i) * 12;
+      const radiusY = 42 + i * 14;
+      const cx = w / 2 + Math.sin(t * 0.7 + i) * 18;
+      const cy = h * 0.47 + Math.cos(t * 0.6 + i) * 10;
+
+      ctx.strokeStyle = `rgba(33,230,255,${Math.max(0, alpha)})`;
+      ctx.shadowColor = '#21e6ff';
+      ctx.shadowBlur = 24;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, radiusX, radiusY, Math.sin(t * 0.2) * 0.08, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
   function drawHeader(w, h, t) {
     ctx.textAlign = 'center';
 
@@ -264,12 +440,8 @@ import { stopMusic } from './audio.js';
 
   function drawStoryScroller(w, h, t) {
     const panelX = w / 2 - 390;
-    const panelY = h * 0.24;
+    const { panelY, panelH, scrollY } = getScrollerMetrics(w, h);
     const panelW = 780;
-    const panelH = h * 0.46;
-    const lineHeight = 28;
-    const startY = panelY + panelH + 40;
-    const scrollY = startY - t * SCROLL_SPEED;
 
     ctx.save();
 
@@ -287,7 +459,7 @@ import { stopMusic } from './audio.js';
     ctx.font = '18px monospace';
 
     ENDING_STORY.forEach((line, index) => {
-      const y = scrollY + index * lineHeight;
+      const y = scrollY + index * LINE_HEIGHT;
       if (y < panelY - 20 || y > panelY + panelH + 30) return;
 
       const edgeFadeTop = Math.min(1, Math.max(0, (y - panelY) / 52));
