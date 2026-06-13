@@ -9,7 +9,7 @@ import { stopMusic } from './audio.js';
 (function () {
   const TEST_KEY = 'KeyO';
   const ENDING_SCREEN = 'ending-test';
-  const BG_URL = 'assets/images/ending-rift-nexus.svg';
+  const BG_URL = 'assets/backgrounds/ending.png';
   const MUSIC_URL = 'assets/audio/ending.mp3';
 
   const canvas = document.getElementById('gameCanvas');
@@ -159,20 +159,28 @@ import { stopMusic } from './audio.js';
     ctx.clearRect(0, 0, w, h);
 
     if (endingBg.complete && endingBg.naturalWidth > 0) {
-      ctx.drawImage(endingBg, 0, 0, w, h);
+      drawCoverImage(endingBg, 0, 0, w, h);
     } else {
       drawProceduralNexus(w, h, t);
     }
 
-    const pulse = 0.18 + Math.sin(t * 1.2) * 0.04;
+    const pulse = 0.12 + Math.sin(t * 1.2) * 0.035;
     ctx.fillStyle = `rgba(0, 0, 0, ${pulse})`;
     ctx.fillRect(0, 0, w, h);
 
-    drawRiftCore(w / 2, h / 2 - 38, 96 + Math.sin(t * 2.0) * 8, t);
     drawFinalText(w, h, t);
     drawScanlines(w, h, t);
 
     ctx.restore();
+  }
+
+  function drawCoverImage(img, x, y, w, h) {
+    const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+    const sw = w / scale;
+    const sh = h / scale;
+    const sx = (img.naturalWidth - sw) / 2;
+    const sy = (img.naturalHeight - sh) / 2;
+    ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
   }
 
   function drawProceduralNexus(w, h, t) {
@@ -194,77 +202,42 @@ import { stopMusic } from './audio.js';
     }
   }
 
-  function drawRiftCore(cx, cy, radius, t) {
-    const colors = ['#21e6ff', '#b44dff', '#ff2bd6', '#fff3a3'];
-
-    for (let ring = 0; ring < 5; ring++) {
-      ctx.beginPath();
-      const rr = radius + ring * 22 + Math.sin(t * 2 + ring) * 5;
-      for (let i = 0; i <= 80; i++) {
-        const a = (Math.PI * 2 * i) / 80;
-        const wobble = Math.sin(a * 7 + t * (2.4 + ring * 0.2)) * 8;
-        const x = cx + Math.cos(a) * (rr + wobble);
-        const y = cy + Math.sin(a) * (rr * 0.62 + wobble * 0.35);
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.closePath();
-      ctx.strokeStyle = colors[ring % colors.length];
-      ctx.globalAlpha = 0.55 - ring * 0.07;
-      ctx.lineWidth = ring === 0 ? 3 : 1.4;
-      ctx.shadowColor = ctx.strokeStyle;
-      ctx.shadowBlur = 22;
-      ctx.stroke();
-    }
-
-    ctx.globalAlpha = 1;
-    ctx.shadowBlur = 0;
-
-    const core = ctx.createRadialGradient(cx, cy, 8, cx, cy, radius * 0.95);
-    core.addColorStop(0, 'rgba(255,255,255,0.95)');
-    core.addColorStop(0.18, 'rgba(33,230,255,0.65)');
-    core.addColorStop(0.55, 'rgba(180,77,255,0.22)');
-    core.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = core;
-    ctx.fillRect(cx - radius * 1.4, cy - radius, radius * 2.8, radius * 2);
-  }
-
   function drawFinalText(w, h, t) {
     ctx.textAlign = 'center';
 
-    const titleY = h * 0.22;
-    ctx.font = 'bold 52px monospace';
+    const titleY = h * 0.16;
+    ctx.font = 'bold 48px monospace';
     ctx.fillStyle = '#fff3a3';
     ctx.shadowColor = '#fff3a3';
-    ctx.shadowBlur = 24;
+    ctx.shadowBlur = 22;
     ctx.fillText('DER RIFT SCHLIESST SICH', w / 2, titleY);
 
-    ctx.shadowBlur = 12;
+    ctx.shadowBlur = 10;
     ctx.shadowColor = '#21e6ff';
     ctx.fillStyle = '#21e6ff';
     ctx.font = '18px monospace';
-    ctx.fillText('Die letzte Kammer verstummt. Nur dein Echo bleibt.', w / 2, titleY + 42);
+    ctx.fillText('Die letzte Kammer verstummt. Nur dein Echo bleibt.', w / 2, titleY + 38);
 
-    const panelY = h * 0.68;
+    const panelY = h * 0.82;
     ctx.shadowBlur = 0;
-    ctx.fillStyle = 'rgba(2, 6, 18, 0.68)';
-    roundRect(w / 2 - 290, panelY - 72, 580, 132, 18, true, false);
+    ctx.fillStyle = 'rgba(2, 6, 18, 0.62)';
+    roundRect(w / 2 - 300, panelY - 62, 600, 112, 18, true, false);
     ctx.strokeStyle = 'rgba(33,230,255,0.45)';
     ctx.lineWidth = 1.5;
-    roundRect(w / 2 - 290, panelY - 72, 580, 132, 18, false, true);
+    roundRect(w / 2 - 300, panelY - 62, 600, 112, 18, false, true);
 
-    ctx.fillStyle = 'rgba(255,255,255,0.82)';
+    ctx.fillStyle = 'rgba(255,255,255,0.84)';
     ctx.font = '16px monospace';
-    ctx.fillText('FINAL PROTOTYPE  //  TESTTASTE: O', w / 2, panelY - 28);
-    ctx.fillStyle = 'rgba(255,255,255,0.58)';
-    ctx.fillText('ENTER / ESC – Zurueck zum Titel', w / 2, panelY + 6);
+    ctx.fillText('FINAL PROTOTYPE  //  TESTTASTE: O', w / 2, panelY - 22);
+    ctx.fillStyle = 'rgba(255,255,255,0.62)';
+    ctx.fillText('ENTER / ESC – Zurueck zum Titel', w / 2, panelY + 12);
 
     const blink = Math.sin(t * 3) > 0;
     if (blink) {
       ctx.fillStyle = '#ff2bd6';
       ctx.shadowColor = '#ff2bd6';
       ctx.shadowBlur = 10;
-      ctx.fillText('MUSIK: assets/audio/ending.mp3', w / 2, panelY + 40);
+      ctx.fillText('ENDING TRACK AKTIV', w / 2, panelY + 40);
       ctx.shadowBlur = 0;
     }
   }
