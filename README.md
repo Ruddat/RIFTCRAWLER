@@ -23,6 +23,8 @@ python3 -m http.server 8000
 | Shift | Dash (Ausweichen) |
 | P | Pause |
 | F | Vollbild |
+| O | Ending-Testscreen anzeigen |
+| Enter / Escape | Ending-Testscreen verlassen |
 
 ## Features
 
@@ -37,6 +39,7 @@ python3 -m http.server 8000
 - Minimap
 - Combo-System
 - Responsive (Keyboard, Maus, Touch)
+- Isolierter Ending-Testscreen mit eigenem Hintergrund und Ending-Musik-Fallback
 
 ## Architektur
 
@@ -58,8 +61,20 @@ js/
 ├── hud.js        – HUD & Minimap
 ├── audio.js      – Prozeduraler Sound
 ├── input.js      – Keyboard/Maus/Touch
+├── ending-test-addon.js – isolierter Finale-Prototyp
 └── utils.js      – Helper-Funktionen
 ```
+
+## Ending-Testscreen
+
+Der Ending-Testscreen ist bewusst als Addon gehalten und verändert die Dungeon-/Boss-Logik nicht.
+
+- Taste `O`: Finale testen
+- `Enter` oder `Escape`: zurück zum Titelscreen
+- Hintergrund: `assets/images/ending-rift-nexus.svg`
+- Musik-Datei erwartet: `assets/audio/ending.mp3`
+- Solange `ending.mp3` fehlt oder vom Browser blockiert wird, spielt ein prozeduraler Drone-Fallback.
+- Suno-Prompt liegt in `assets/audio/ending_suno_prompt.txt`.
 
 ## Lizenz
 
