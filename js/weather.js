@@ -1,82 +1,96 @@
 // ============================================================
 // RIFT CRAWLER – Integrated Weather Atmosphere
 // ============================================================
-// This module is drawn from main.js inside the normal room render stack:
-// room background -> weather -> entities -> vignette -> HUD.
+// Render ownership stays in main.js. This module only updates/draws the
+// atmosphere layer between room/background and gameplay entities.
 
 import { ROOM_WIDTH, ROOM_HEIGHT } from './config.js';
 import { state } from './state.js';
 import { getCurrentRoom } from './room.js';
 
-const MAX_RAIN_DROPS = 90;
-const MAX_CLOUDS = 7;
+const WEATHER_ENABLED = true;
+const MAX_RAIN_DROPS = 120;
+const MAX_CLOUDS = 8;
+const MAX_DUST = 42;
 
 const PRESETS = {
   crypt: {
     key: 'crypt',
-    clouds: 0.34,
-    rain: 0.10,
-    fog: 0.12,
-    lightning: 0.025,
-    tint: 'rgba(20, 65, 110, 0.055)',
-    rainColor: 'rgba(120, 210, 255, 0.24)',
-    cloudColor: 'rgba(45, 70, 110, 0.13)',
-    fogColor: 'rgba(120, 180, 255, 0.055)',
+    clouds: 0.38,
+    rain: 0.14,
+    fog: 0.14,
+    dust: 0.32,
+    lightning: 0.035,
+    tint: 'rgba(20, 70, 120, 0.045)',
+    rainColor: 'rgba(120, 215, 255, 0.28)',
+    cloudColor: 'rgba(42, 72, 115, 0.15)',
+    fogColor: 'rgba(120, 180, 255, 0.060)',
+    dustColor: 'rgba(95, 190, 255, 0.22)',
   },
   abyss: {
     key: 'abyss',
-    clouds: 0.48,
-    rain: 0.05,
-    fog: 0.18,
-    lightning: 0.04,
-    tint: 'rgba(70, 35, 120, 0.06)',
-    rainColor: 'rgba(190, 120, 255, 0.18)',
-    cloudColor: 'rgba(80, 45, 120, 0.14)',
-    fogColor: 'rgba(170, 120, 255, 0.06)',
+    clouds: 0.50,
+    rain: 0.06,
+    fog: 0.22,
+    dust: 0.38,
+    lightning: 0.055,
+    tint: 'rgba(80, 35, 130, 0.052)',
+    rainColor: 'rgba(190, 120, 255, 0.20)',
+    cloudColor: 'rgba(85, 45, 130, 0.16)',
+    fogColor: 'rgba(175, 120, 255, 0.062)',
+    dustColor: 'rgba(190, 110, 255, 0.24)',
   },
   poison: {
     key: 'poison',
-    clouds: 0.28,
-    rain: 0.03,
-    fog: 0.22,
-    lightning: 0.01,
-    tint: 'rgba(45, 110, 70, 0.055)',
-    rainColor: 'rgba(120, 255, 160, 0.14)',
-    cloudColor: 'rgba(45, 95, 70, 0.12)',
-    fogColor: 'rgba(120, 255, 160, 0.055)',
+    clouds: 0.30,
+    rain: 0.04,
+    fog: 0.24,
+    dust: 0.46,
+    lightning: 0.015,
+    tint: 'rgba(45, 115, 70, 0.048)',
+    rainColor: 'rgba(120, 255, 160, 0.16)',
+    cloudColor: 'rgba(45, 95, 70, 0.13)',
+    fogColor: 'rgba(120, 255, 160, 0.060)',
+    dustColor: 'rgba(105, 255, 145, 0.24)',
   },
   inferno: {
     key: 'inferno',
     clouds: 0.42,
     rain: 0.00,
-    fog: 0.10,
-    lightning: 0.035,
-    tint: 'rgba(160, 65, 25, 0.055)',
-    rainColor: 'rgba(255, 120, 60, 0.12)',
-    cloudColor: 'rgba(135, 55, 35, 0.13)',
-    fogColor: 'rgba(255, 130, 70, 0.045)',
+    fog: 0.13,
+    dust: 0.58,
+    lightning: 0.045,
+    tint: 'rgba(170, 70, 25, 0.050)',
+    rainColor: 'rgba(255, 120, 60, 0.10)',
+    cloudColor: 'rgba(145, 60, 35, 0.16)',
+    fogColor: 'rgba(255, 130, 70, 0.052)',
+    dustColor: 'rgba(255, 135, 65, 0.24)',
   },
   nexus: {
     key: 'nexus',
-    clouds: 0.58,
-    rain: 0.16,
-    fog: 0.18,
-    lightning: 0.08,
-    tint: 'rgba(155, 30, 80, 0.06)',
-    rainColor: 'rgba(255, 90, 140, 0.24)',
-    cloudColor: 'rgba(100, 35, 80, 0.15)',
-    fogColor: 'rgba(255, 100, 170, 0.055)',
+    clouds: 0.62,
+    rain: 0.20,
+    fog: 0.22,
+    dust: 0.44,
+    lightning: 0.10,
+    tint: 'rgba(160, 30, 85, 0.056)',
+    rainColor: 'rgba(255, 90, 145, 0.26)',
+    cloudColor: 'rgba(105, 35, 85, 0.17)',
+    fogColor: 'rgba(255, 100, 170, 0.062)',
+    dustColor: 'rgba(255, 95, 160, 0.24)',
   },
   bossStorm: {
     key: 'bossStorm',
-    clouds: 0.86,
-    rain: 0.34,
-    fog: 0.24,
-    lightning: 0.14,
-    tint: 'rgba(255, 55, 85, 0.075)',
-    rainColor: 'rgba(170, 230, 255, 0.34)',
-    cloudColor: 'rgba(75, 45, 75, 0.18)',
-    fogColor: 'rgba(255, 110, 150, 0.065)',
+    clouds: 0.92,
+    rain: 0.42,
+    fog: 0.28,
+    dust: 0.58,
+    lightning: 0.18,
+    tint: 'rgba(255, 55, 85, 0.070)',
+    rainColor: 'rgba(175, 235, 255, 0.36)',
+    cloudColor: 'rgba(80, 45, 78, 0.20)',
+    fogColor: 'rgba(255, 110, 150, 0.070)',
+    dustColor: 'rgba(255, 120, 170, 0.26)',
   },
 };
 
@@ -84,6 +98,7 @@ const weather = {
   presetKey: null,
   clouds: [],
   rain: [],
+  dust: [],
   lightningTimer: 4,
   lightningFlash: 0,
   lightningBolt: null,
@@ -110,41 +125,54 @@ function ensurePreset(preset) {
   weather.presetKey = preset.key;
   weather.clouds = [];
   weather.rain = [];
+  weather.dust = [];
   weather.lightningFlash = 0;
   weather.lightningBolt = null;
-  weather.lightningTimer = rand(5, 11) / Math.max(0.05, preset.lightning || 0.01);
+  weather.lightningTimer = rand(7, 14) / Math.max(0.05, preset.lightning || 0.01);
 
-  const cloudCount = Math.ceil(MAX_CLOUDS * preset.clouds);
-  for (let i = 0; i < cloudCount; i++) weather.clouds.push(createCloud(true));
-
-  const rainCount = Math.ceil(MAX_RAIN_DROPS * preset.rain);
-  for (let i = 0; i < rainCount; i++) weather.rain.push(createRainDrop(true));
+  for (let i = 0; i < Math.ceil(MAX_CLOUDS * preset.clouds); i++) weather.clouds.push(createCloud(true));
+  for (let i = 0; i < Math.ceil(MAX_RAIN_DROPS * preset.rain); i++) weather.rain.push(createRainDrop(true));
+  for (let i = 0; i < Math.ceil(MAX_DUST * preset.dust); i++) weather.dust.push(createDust(true));
 }
 
 function createCloud(randomizeX = false) {
   return {
-    x: randomizeX ? rand(-160, ROOM_WIDTH + 160) : ROOM_WIDTH + rand(20, 180),
-    y: rand(22, ROOM_HEIGHT * 0.38),
-    w: rand(150, 330),
-    h: rand(38, 88),
-    speed: rand(6, 18),
-    alpha: rand(0.14, 0.34),
+    x: randomizeX ? rand(-180, ROOM_WIDTH + 180) : ROOM_WIDTH + rand(20, 220),
+    y: rand(18, ROOM_HEIGHT * 0.38),
+    w: rand(150, 350),
+    h: rand(38, 90),
+    speed: rand(5, 16),
+    alpha: rand(0.12, 0.30),
     phase: rand(0, Math.PI * 2),
   };
 }
 
 function createRainDrop(randomizeY = false) {
   return {
-    x: rand(-80, ROOM_WIDTH + 80),
-    y: randomizeY ? rand(-80, ROOM_HEIGHT + 80) : rand(-120, -20),
-    len: rand(9, 22),
-    speed: rand(300, 520),
-    drift: rand(-64, -28),
-    alpha: rand(0.12, 0.42),
+    x: rand(-90, ROOM_WIDTH + 90),
+    y: randomizeY ? rand(-90, ROOM_HEIGHT + 90) : rand(-140, -20),
+    len: rand(10, 24),
+    speed: rand(320, 560),
+    drift: rand(-70, -32),
+    alpha: rand(0.14, 0.46),
+  };
+}
+
+function createDust(randomizeY = false) {
+  return {
+    x: rand(24, ROOM_WIDTH - 24),
+    y: randomizeY ? rand(24, ROOM_HEIGHT - 24) : ROOM_HEIGHT + rand(10, 80),
+    size: rand(1.0, 2.4),
+    speed: rand(8, 26),
+    drift: rand(-8, 10),
+    alpha: rand(0.10, 0.28),
+    phase: rand(0, Math.PI * 2),
   };
 }
 
 export function updateWeatherAtmosphere(dt) {
+  if (!WEATHER_ENABLED) return;
+
   const preset = getPreset();
   ensurePreset(preset);
 
@@ -157,7 +185,7 @@ export function updateWeatherAtmosphere(dt) {
   for (const cloud of weather.clouds) {
     cloud.x -= cloud.speed * dt;
     cloud.y += Math.sin(weather.time * 0.4 + cloud.phase) * 0.035;
-    if (cloud.x + cloud.w < -180) Object.assign(cloud, createCloud(false));
+    if (cloud.x + cloud.w < -190) Object.assign(cloud, createCloud(false));
   }
 
   const wantedRain = Math.ceil(MAX_RAIN_DROPS * preset.rain);
@@ -167,9 +195,22 @@ export function updateWeatherAtmosphere(dt) {
   for (const drop of weather.rain) {
     drop.x += drop.drift * dt;
     drop.y += drop.speed * dt;
-    if (drop.y > ROOM_HEIGHT + 50 || drop.x < -120) {
+    if (drop.y > ROOM_HEIGHT + 60 || drop.x < -130) {
       Object.assign(drop, createRainDrop(false));
-      drop.x = rand(-20, ROOM_WIDTH + 120);
+      drop.x = rand(-20, ROOM_WIDTH + 130);
+    }
+  }
+
+  const wantedDust = Math.ceil(MAX_DUST * preset.dust);
+  while (weather.dust.length < wantedDust) weather.dust.push(createDust());
+  while (weather.dust.length > wantedDust) weather.dust.pop();
+
+  for (const mote of weather.dust) {
+    mote.x += (mote.drift + Math.sin(weather.time + mote.phase) * 5) * dt;
+    mote.y -= mote.speed * dt;
+    if (mote.y < -20 || mote.x < -30 || mote.x > ROOM_WIDTH + 30) {
+      Object.assign(mote, createDust(false));
+      mote.x = rand(24, ROOM_WIDTH - 24);
     }
   }
 
@@ -188,7 +229,7 @@ export function updateWeatherAtmosphere(dt) {
 }
 
 function triggerLightning(preset) {
-  weather.lightningFlash = preset.key === 'bossStorm' ? 0.42 : 0.26;
+  weather.lightningFlash = preset.key === 'bossStorm' ? 0.48 : 0.30;
   weather.lightningBolt = createLightningBolt();
   weather.lightningTimer = rand(7, 15) / Math.max(0.05, preset.lightning);
 
@@ -203,14 +244,14 @@ function triggerLightning(preset) {
 }
 
 function createLightningBolt() {
-  const startX = rand(ROOM_WIDTH * 0.18, ROOM_WIDTH * 0.82);
+  const startX = rand(ROOM_WIDTH * 0.15, ROOM_WIDTH * 0.85);
   const points = [{ x: startX, y: 0 }];
-  const segments = 6 + Math.floor(Math.random() * 4);
+  const segments = 6 + Math.floor(Math.random() * 5);
   let x = startX;
 
   for (let i = 1; i <= segments; i++) {
-    const y = (ROOM_HEIGHT * 0.48) * (i / segments);
-    x += rand(-34, 34);
+    const y = (ROOM_HEIGHT * 0.50) * (i / segments);
+    x += rand(-38, 38);
     points.push({ x, y });
   }
 
@@ -218,6 +259,8 @@ function createLightningBolt() {
 }
 
 export function drawWeatherAtmosphere(ctx) {
+  if (!WEATHER_ENABLED) return;
+
   const preset = getPreset();
   ensurePreset(preset);
 
@@ -229,6 +272,7 @@ export function drawWeatherAtmosphere(ctx) {
   drawTint(ctx, preset);
   drawClouds(ctx, preset);
   drawFog(ctx, preset);
+  drawDust(ctx, preset);
   drawRain(ctx, preset);
   drawLightning(ctx, preset);
 
@@ -242,7 +286,7 @@ function drawTint(ctx, preset) {
 
 function drawClouds(ctx, preset) {
   for (const cloud of weather.clouds) {
-    const breathe = 0.74 + Math.sin(weather.time * 0.7 + cloud.phase) * 0.14;
+    const breathe = 0.76 + Math.sin(weather.time * 0.7 + cloud.phase) * 0.14;
     ctx.save();
     ctx.globalAlpha = cloud.alpha * breathe;
 
@@ -271,7 +315,7 @@ function drawClouds(ctx, preset) {
 function drawFog(ctx, preset) {
   if (preset.fog <= 0) return;
 
-  const fogAlpha = Math.min(0.10, preset.fog * 0.30);
+  const fogAlpha = Math.min(0.12, preset.fog * 0.34);
   for (let i = 0; i < 3; i++) {
     const y = ROOM_HEIGHT * (0.36 + i * 0.19);
     const x = ((weather.time * (8 + i * 5)) + i * 280) % (ROOM_WIDTH + 320) - 160;
@@ -282,6 +326,26 @@ function drawFog(ctx, preset) {
     ctx.fillStyle = grad;
     ctx.fillRect(x - 310, y - 125, 620, 250);
   }
+}
+
+function drawDust(ctx, preset) {
+  if (!weather.dust.length) return;
+
+  ctx.save();
+  ctx.fillStyle = preset.dustColor;
+  ctx.shadowColor = preset.dustColor;
+  ctx.shadowBlur = 4;
+
+  for (const mote of weather.dust) {
+    const pulse = 0.75 + Math.sin(weather.time * 2 + mote.phase) * 0.25;
+    ctx.globalAlpha = mote.alpha * pulse;
+    ctx.beginPath();
+    ctx.arc(mote.x, mote.y, mote.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+  ctx.globalAlpha = 1;
 }
 
 function drawRain(ctx, preset) {
@@ -308,11 +372,11 @@ function drawLightning(ctx, preset) {
   if (weather.lightningBolt) {
     const alpha = Math.max(0, weather.lightningBolt.life / weather.lightningBolt.maxLife);
     ctx.save();
-    ctx.globalAlpha = alpha * 0.72;
-    ctx.strokeStyle = preset.key === 'bossStorm' ? 'rgba(255, 80, 140, 0.85)' : 'rgba(160, 230, 255, 0.75)';
+    ctx.globalAlpha = alpha * 0.78;
+    ctx.strokeStyle = preset.key === 'bossStorm' ? 'rgba(255, 80, 140, 0.90)' : 'rgba(160, 230, 255, 0.82)';
     ctx.lineWidth = 2;
     ctx.shadowColor = ctx.strokeStyle;
-    ctx.shadowBlur = 12;
+    ctx.shadowBlur = 14;
     ctx.beginPath();
     weather.lightningBolt.points.forEach((point, index) => {
       if (index === 0) ctx.moveTo(point.x, point.y);
@@ -324,7 +388,7 @@ function drawLightning(ctx, preset) {
 
   if (weather.lightningFlash > 0) {
     ctx.save();
-    ctx.globalAlpha = weather.lightningFlash * 0.20;
+    ctx.globalAlpha = weather.lightningFlash * 0.18;
     ctx.fillStyle = preset.key === 'bossStorm' ? 'rgba(255,60,110,1)' : 'rgba(180,230,255,1)';
     ctx.fillRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
     ctx.restore();
